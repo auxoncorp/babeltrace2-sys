@@ -1,0 +1,3 @@
+[submodule "vendor/babeltrace"]
+	path = vendor/babeltrace
+	url = https://github.com/efficios/babeltrace.git

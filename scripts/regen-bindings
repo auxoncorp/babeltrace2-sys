@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -e
+
+bindgen \
+    bindgen/wrapper.h \
+    -o src/bindings.rs \
+    --no-derive-debug \
+    --no-include-path-detection \
+    --default-enum-style moduleconsts \
+    --enable-function-attribute-detection \
+    --no-copy "bt_plugin.*" \
+    -- -I "$@"
+
+rustfmt src/bindings.rs
+
+exit 0
