@@ -1,12 +1,10 @@
 use crate::{
     BoxedRawProxyPluginState, BtResult, ComponentClassFilter, ComponentClassSink,
     ComponentClassSource, ComponentFilter, ComponentSink, ComponentSource, CtfPlugin,
-    CtfPluginSourceInitParams, Error, Graph, Logger, LoggingLevel, OwnedEvent, ProxyPlugin,
-    RunStatus, StreamProperties, TraceProperties, UtilsPlugin,
+    CtfPluginSrcExt, Error, Graph, Logger, LoggingLevel, ProxyPlugin, UtilsPlugin,
 };
-use std::collections::{BTreeSet, VecDeque};
 
-pub struct TraceIterator {
+pub(crate) struct CommonPipeline {
     _utils_plugin: UtilsPlugin,
     _ctf_plugin: CtfPlugin,
     _proxy_plugin: ProxyPlugin,
@@ -14,16 +12,14 @@ pub struct TraceIterator {
     _muxer_filter_class: ComponentClassFilter,
     _proxy_sink_class: ComponentClassSink,
     _ctf_src: ComponentSource,
-    _ctf_params: CtfPluginSourceInitParams,
     _muxer_filter: ComponentFilter,
     _proxy_sink: ComponentSink,
-    graph: Graph,
-    last_run_status: RunStatus,
-    proxy_state: BoxedRawProxyPluginState,
+    pub(crate) graph: Graph,
+    pub(crate) proxy_state: BoxedRawProxyPluginState,
 }
 
-impl TraceIterator {
-    pub fn new(log_level: LoggingLevel, ctf_params: CtfPluginSourceInitParams) -> BtResult<Self> {
+impl CommonPipeline {
+    pub(crate) fn new<P: CtfPluginSrcExt>(log_level: LoggingLevel, params: &P) -> BtResult<Self> {
         Logger::set_level(log_level);
 
         // Load builtin plugins we need
@@ -34,7 +30,8 @@ impl TraceIterator {
         let proxy_plugin = ProxyPlugin::load()?;
 
         // Borrow the component classes from the plugins
-        let ctf_src_class = ctf_plugin.borrow_fs_source_component_class()?;
+        let ctf_src_class = ctf_plugin
+            .borrow_source_component_class_by_name(params.source_component_class_name())?;
         let muxer_filter_class = utils_plugin.borrow_muxer_filter_component_class()?;
         let proxy_sink_class = proxy_plugin.borrow_output_sink_component_class_by_name()?;
 
@@ -44,7 +41,7 @@ impl TraceIterator {
         let ctf_src = graph.add_source_component(
             &ctf_src_class,
             CtfPlugin::graph_node_name(),
-            ctf_params.params(),
+            params.parameters(),
             log_level,
         )?;
 
@@ -85,12 +82,7 @@ impl TraceIterator {
         let out_port = muxer_filter.borrow_output_port_by_index(0)?;
         graph.connect_ports(&out_port, &in_port)?;
 
-        // Do an initial run of the graph to connect and initialize all the components.
-        // We'll have trace/stream metadata properties loaded and possibly some
-        // events afterwards
-        let last_run_status = graph.run_once()?;
-
-        Ok(TraceIterator {
+        Ok(CommonPipeline {
             _utils_plugin: utils_plugin,
             _ctf_plugin: ctf_plugin,
             _proxy_plugin: proxy_plugin,
@@ -98,47 +90,10 @@ impl TraceIterator {
             _muxer_filter_class: muxer_filter_class,
             _proxy_sink_class: proxy_sink_class,
             _ctf_src: ctf_src,
-            _ctf_params: ctf_params,
             _muxer_filter: muxer_filter,
             _proxy_sink: proxy_sink,
             graph,
-            last_run_status,
             proxy_state,
         })
-    }
-
-    pub fn trace_properties(&self) -> &TraceProperties {
-        &self.proxy_state.as_ref().trace_properties
-    }
-
-    pub fn stream_properties(&self) -> &BTreeSet<StreamProperties> {
-        &self.proxy_state.as_ref().stream_properties
-    }
-
-    pub fn events_mut(&mut self) -> &mut VecDeque<OwnedEvent> {
-        &mut self.proxy_state.as_mut().events
-    }
-}
-
-impl Iterator for TraceIterator {
-    type Item = BtResult<OwnedEvent>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        // Drain the previous message iterators bunch of events
-        if let Some(event) = self.proxy_state.as_mut().events.pop_front() {
-            Some(Ok(event))
-        } else {
-            // Get another batch from upstream source component if not done
-            match self.last_run_status {
-                RunStatus::Ok | RunStatus::TryAgain => match self.graph.run_once() {
-                    Ok(last_run_status) => {
-                        self.last_run_status = last_run_status;
-                        self.proxy_state.as_mut().events.pop_front().map(Ok)
-                    }
-                    Err(e) => Some(Err(e)),
-                },
-                RunStatus::End => None,
-            }
-        }
     }
 }

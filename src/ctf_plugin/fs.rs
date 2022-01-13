@@ -1,39 +1,8 @@
-use crate::{BtResult, ComponentClassSource, Error, Plugin, Value};
+use crate::{BtResult, CtfPlugin, CtfPluginSrcExt, Error, Value};
 use std::ffi::CStr;
 
-/// https://babeltrace.org/docs/v2.0/man7/babeltrace2-source.ctf.fs.7/
-pub struct CtfPlugin(Plugin);
-
-impl CtfPlugin {
-    pub const PLUGIN_NAME: &'static [u8] = b"ctf\0";
-    pub const FS_COMP_NAME: &'static [u8] = b"fs\0";
-    pub const GRAPH_NODE_NAME: &'static [u8] = b"source.ctf.fs\0";
-
-    pub fn load() -> BtResult<Self> {
-        let name = Self::plugin_name();
-        Ok(CtfPlugin(Plugin::load_from_statics_by_name(name)?))
-    }
-
-    pub fn borrow_fs_source_component_class(&self) -> BtResult<ComponentClassSource> {
-        let name = Self::fs_name();
-        self.0.borrow_source_component_class_by_name(name)
-    }
-
-    pub fn plugin_name() -> &'static CStr {
-        unsafe { CStr::from_bytes_with_nul_unchecked(Self::PLUGIN_NAME) }
-    }
-
-    pub fn fs_name() -> &'static CStr {
-        unsafe { CStr::from_bytes_with_nul_unchecked(Self::FS_COMP_NAME) }
-    }
-
-    pub fn graph_node_name() -> &'static CStr {
-        unsafe { CStr::from_bytes_with_nul_unchecked(Self::GRAPH_NODE_NAME) }
-    }
-}
-
 /// https://babeltrace.org/docs/v2.0/man7/babeltrace2-source.ctf.fs.7/#doc-_initialization_parameters
-pub struct CtfPluginSourceInitParams {
+pub struct CtfPluginSourceFsInitParams {
     params: Value,
     _inputs_val: Value,
     _trace_name_val: Option<Value>,
@@ -42,7 +11,7 @@ pub struct CtfPluginSourceInitParams {
     _force_epoch_val: Option<Value>,
 }
 
-impl CtfPluginSourceInitParams {
+impl CtfPluginSourceFsInitParams {
     pub const TRACE_NAME_KEY: &'static [u8] = b"trace-name\0";
     pub const CLOCK_CLASS_OFFSET_NS_KEY: &'static [u8] = b"clock-class-offset-ns\0";
     pub const CLOCK_CLASS_OFFSET_S_KEY: &'static [u8] = b"clock-class-offset-s\0";
@@ -63,7 +32,7 @@ impl CtfPluginSourceInitParams {
         inputs: &[&CStr],
     ) -> BtResult<Self> {
         log::debug!(
-            "Creating CTF-source init params: trace-name={:?}, clock-class-offset-ns={:?}, clock-class-offset-s={:?}, force-clock-class-origin-unix-epoch={:?}, inputs={:?}",
+            "Creating source.ctf.fs init params: trace-name={:?}, clock-class-offset-ns={:?}, clock-class-offset-s={:?}, force-clock-class-origin-unix-epoch={:?}, inputs={:?}",
             trace_name,
             clock_class_offset_ns,
             clock_class_offset_s,
@@ -115,7 +84,7 @@ impl CtfPluginSourceInitParams {
             None
         };
 
-        Ok(CtfPluginSourceInitParams {
+        Ok(CtfPluginSourceFsInitParams {
             params,
             _inputs_val: inputs_val,
             _trace_name_val: trace_name_val,
@@ -152,46 +121,52 @@ impl CtfPluginSourceInitParams {
     }
 }
 
+impl CtfPluginSrcExt for CtfPluginSourceFsInitParams {
+    fn parameters(&self) -> &Value {
+        self.params()
+    }
+
+    fn source_component_class_name(&self) -> &'static CStr {
+        CtfPlugin::fs_name()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn cstrings_are_valid() {
-        assert_ne!(CtfPlugin::plugin_name().to_str().unwrap().len(), 0);
-        assert_ne!(CtfPlugin::fs_name().to_str().unwrap().len(), 0);
-        assert_ne!(CtfPlugin::graph_node_name().to_str().unwrap().len(), 0);
-
         assert_ne!(
-            CtfPluginSourceInitParams::inputs_key()
+            CtfPluginSourceFsInitParams::inputs_key()
                 .to_str()
                 .unwrap()
                 .len(),
             0
         );
         assert_ne!(
-            CtfPluginSourceInitParams::trace_name_key()
+            CtfPluginSourceFsInitParams::trace_name_key()
                 .to_str()
                 .unwrap()
                 .len(),
             0
         );
         assert_ne!(
-            CtfPluginSourceInitParams::offset_ns_key()
+            CtfPluginSourceFsInitParams::offset_ns_key()
                 .to_str()
                 .unwrap()
                 .len(),
             0
         );
         assert_ne!(
-            CtfPluginSourceInitParams::offset_sec_key()
+            CtfPluginSourceFsInitParams::offset_sec_key()
                 .to_str()
                 .unwrap()
                 .len(),
             0
         );
         assert_ne!(
-            CtfPluginSourceInitParams::force_epoch_key()
+            CtfPluginSourceFsInitParams::force_epoch_key()
                 .to_str()
                 .unwrap()
                 .len(),

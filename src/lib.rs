@@ -11,12 +11,15 @@ mod bindings;
 #[allow(non_camel_case_types)]
 pub mod ffi;
 
+pub(crate) mod common_pipeline;
 pub(crate) mod util;
 
 mod clock;
 mod component;
 mod component_class;
+mod ctf_iterator;
 mod ctf_plugin;
+mod ctf_stream;
 mod env;
 mod error;
 mod event;
@@ -31,14 +34,15 @@ mod proxy_plugin;
 mod self_component;
 mod stream;
 mod trace;
-mod trace_iterator;
 mod utils_plugin;
 mod value;
 
 pub use clock::*;
 pub use component::*;
 pub use component_class::*;
+pub use ctf_iterator::*;
 pub use ctf_plugin::*;
+pub use ctf_stream::*;
 pub use env::*;
 pub use error::*;
 pub use event::*;
@@ -53,6 +57,5 @@ pub use proxy_plugin::*;
 pub use self_component::*;
 pub use stream::*;
 pub use trace::*;
-pub use trace_iterator::*;
 pub use utils_plugin::*;
 pub use value::*;
