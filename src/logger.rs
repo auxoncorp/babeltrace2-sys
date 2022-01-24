@@ -1,4 +1,6 @@
 use crate::ffi;
+use std::fmt;
+use std::str::FromStr;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum LoggingLevel {
@@ -37,5 +39,39 @@ impl From<LoggingLevel> for ffi::bt_logging_level::Type {
             Fatal => ffi::bt_logging_level::BT_LOGGING_LEVEL_FATAL,
             None => ffi::bt_logging_level::BT_LOGGING_LEVEL_NONE,
         }
+    }
+}
+
+impl fmt::Display for LoggingLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use LoggingLevel::*;
+        let s = match self {
+            Trace => "trace",
+            Debug => "debug",
+            Info => "info",
+            Warn => "warn",
+            Error => "error",
+            Fatal => "fatal",
+            None => "none",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for LoggingLevel {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use LoggingLevel::*;
+        Ok(match s.to_lowercase().as_str() {
+            "trace" => Trace,
+            "debug" => Debug,
+            "info" => Info,
+            "warn" | "warning" => Warn,
+            "error" | "err" => Error,
+            "fatal" => Fatal,
+            "none" => None,
+            _ => return Err(format!("'{}' is not a valid logging level", s)),
+        })
     }
 }
