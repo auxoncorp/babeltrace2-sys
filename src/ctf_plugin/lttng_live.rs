@@ -1,5 +1,5 @@
 use crate::{BtResult, CtfPlugin, CtfPluginSrcExt, Value};
-use std::{ffi::CStr, str::FromStr};
+use std::{ffi::CStr, fmt, str::FromStr};
 
 /// When the message iterator does not find the specified remote tracing
 /// session (SESSION part of the inputs parameter), do one of the following actions.
@@ -109,6 +109,18 @@ impl FromStr for SessionNotFoundAction {
             "end" => End,
             _ => return Err(format!("{} is not a valid action", s)),
         })
+    }
+}
+
+impl fmt::Display for SessionNotFoundAction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use SessionNotFoundAction::*;
+        let s = match self {
+            Continue => "continue",
+            Fail => "fail",
+            End => "end",
+        };
+        write!(f, "{}", s)
     }
 }
 
