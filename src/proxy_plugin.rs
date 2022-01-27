@@ -150,11 +150,11 @@ impl ProxyPluginState {
                             self.events.push_back(event);
                         }
                         // TODO - make this a type we surface
-                        MessageType::DiscardedEvents => log::warn!(
+                        MessageType::DiscardedEvents => log::debug!(
                             "Tracer discarded events in trace UUID={:?}",
                             self.trace_properties.uuid
                         ),
-                        MessageType::DiscardedPackets => log::warn!(
+                        MessageType::DiscardedPackets => log::debug!(
                             "Tracer discarded packets in trace UUID={:?}",
                             self.trace_properties.uuid
                         ),
