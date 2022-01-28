@@ -89,26 +89,70 @@ impl Drop for BoxedRawProxyPluginState {
 
 pub type ConsumeSuccessCode = ffi::bt_component_class_sink_consume_method_status::Type;
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, err_derive::Error)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum ConsumeError {
-    #[error(display = "Plugin state is NULL")]
     NullState,
 
-    #[error(display = "Message iterator is NULL")]
     NullIterator,
 
-    #[error(display = "Message iterator returned an error. {}", _0)]
     MessageIterator(Error),
 
-    #[error(display = "Failed to borrow stream. {}", _0)]
     StreamBorrow(Error),
 
-    #[error(display = "Failed to borrow event. {}", _0)]
     EventBorrow(Error),
 
     // Catch-all
-    #[error(display = "{}", _0)]
-    Error(#[error(source, from)] Error),
+    Error(Error),
+}
+
+
+impl std::error::Error for ConsumeError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            ConsumeError::NullState
+            | ConsumeError::NullIterator => { None }
+            ConsumeError::MessageIterator(e)
+            | ConsumeError::StreamBorrow(e)
+            | ConsumeError::EventBorrow(e)
+            | ConsumeError::Error(e) => {
+                Some(e)
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for ConsumeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConsumeError::NullState => {
+                f.write_str("Plugin state is NULL")
+            }
+            ConsumeError::NullIterator => {
+                f.write_str("Message iterator is NULL")
+            }
+            ConsumeError::MessageIterator(e) => {
+                f.write_str("Message iterator returned an error. ")?;
+                e.fmt(f)
+            }
+            ConsumeError::StreamBorrow(e) => {
+                f.write_str("Failed to borrow stream. ")?;
+                e.fmt(f)
+            }
+            ConsumeError::EventBorrow(e) => {
+                f.write_str("Failed to borrow event. ")?;
+                e.fmt(f)
+            }
+            ConsumeError::Error(e) => {
+                e.fmt(f)
+            }
+        }
+    }
+}
+
+impl From<Error> for ConsumeError {
+    fn from(e: Error) -> Self {
+        ConsumeError::Error(e)
+    }
 }
 
 impl ProxyPluginState {
