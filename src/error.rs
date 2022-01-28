@@ -1,40 +1,42 @@
+
 pub type BtResult<T> = Result<T, Error>;
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, err_derive::Error)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum Error {
     // Catch-all for non-zero return codes, should be expanded eventually
-    #[error(display = "libbabeltrace returned a non-zero return code ({})", _0)]
     Failure(isize),
-
     // Catch-all for borrows that returned NULL, should be expanded eventually
-    #[error(display = "libbabeltrace returned NULL when attempting to borrow a resource")]
     ResourceBorrow,
-
-    #[error(display = "libbabeltrace encountered a memory error")]
     Memory,
-
-    #[error(display = "At least one CTF-containing input directory is required")]
     CtfSourceRequiresInputs,
-
-    #[error(
-        display = "At least one CTF output port is required, check that the input path contains at least one stream"
-    )]
     CtfSourceMissingOutputPorts,
-
-    #[error(display = "At least one sink output port is required")]
     ProxySinkMissingInputPort,
-
-    #[error(display = "Encountered a libbabeltrace string with invalid UTF-8")]
     Utf8Error,
-
-    #[error(display = "Encountered an invalid libbabeltrace UUID")]
     Uuid,
-
-    #[error(display = "Encountered an invalid trace environment value")]
     EnvValue,
-
-    #[error(display = "Invalid string with interior NULL byte")]
     NulError,
+}
+impl std::error::Error for Error {}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::Failure(code) => {
+                f.write_str("libbabeltrace returned a non-zero return code (")?;
+                code.fmt(f)?;
+                f.write_str(")")
+            }
+            Error::ResourceBorrow => { f.write_str("libbabeltrace returned NULL when attempting to borrow a resource") }
+            Error::Memory => { f.write_str("libbabeltrace encountered a memory error") }
+            Error::CtfSourceRequiresInputs => { f.write_str("At least one CTF-containing input directory is required") }
+            Error::CtfSourceMissingOutputPorts => { f.write_str("At least one CTF output port is required, check that the input path contains at least one stream") }
+            Error::ProxySinkMissingInputPort => { f.write_str("At least one sink output port is required") }
+            Error::Utf8Error => { f.write_str("Encountered a libbabeltrace string with invalid UTF-8") }
+            Error::Uuid => { f.write_str("Encountered an invalid libbabeltrace UUID") }
+            Error::EnvValue => { f.write_str("Encountered an invalid trace environment value") }
+            Error::NulError => { f.write_str("Invalid string with interior NULL byte") }
+        }
+    }
 }
 
 impl From<std::str::Utf8Error> for Error {

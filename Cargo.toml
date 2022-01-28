@@ -12,13 +12,11 @@ license = "MIT"
 [build-dependencies]
 autotools = "0.2"
 pkg-config = "0.3"
-bindgen = "0.53"
 
 [dependencies]
 log = "0.4"
-err-derive = "0.3"
 uuid = { version = "0.8", features = ["v5"] }
-ordered-float = "2.2.0"
+ordered-float = { version = "2.2.0", default-features = false }
 
 [dev-dependencies]
 structopt = "0.3"
