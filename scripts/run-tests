@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -e
+
+cargo test --features "test"
+
+exit 0

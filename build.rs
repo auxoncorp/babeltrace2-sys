@@ -46,6 +46,10 @@ fn main() {
         .probe("libpcre")
         .expect("Failed to find libpcre pkg-config");
 
+    if cfg!(feature = "test") {
+        println!("cargo:rustc-link-arg=-Wl,--allow-multiple-definition");
+    }
+
     println!(
         "cargo:rustc-link-search=native={}/lib",
         babeltrace_path.display()
