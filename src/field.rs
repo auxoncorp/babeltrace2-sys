@@ -1,6 +1,7 @@
-use crate::{ffi, util, BtResult};
+use crate::{ffi, util, BtResult, BtResultExt};
 use ordered_float::OrderedFloat;
-use std::fmt;
+use std::collections::BTreeSet;
+use std::{fmt, ptr, slice};
 
 /// Fields are containers of trace data: they are found in events and packets
 pub struct Field {
@@ -60,6 +61,64 @@ impl Field {
                     log::trace!("Skipping empty field string");
                     None
                 }
+            }
+            UnsignedEnumeration => {
+                let v = unsafe { ffi::bt_field_integer_unsigned_get_value(self.field) };
+                let l = unsafe {
+                    let mut labels = ptr::null();
+                    let mut count = 0;
+                    ffi::bt_field_enumeration_unsigned_get_mapping_labels(
+                        self.field,
+                        &mut labels,
+                        &mut count,
+                    )
+                    .capi_result()?;
+                    let labels_slice = if count == 0 || labels.is_null() {
+                        &[]
+                    } else {
+                        slice::from_raw_parts(labels, count as _)
+                    };
+                    let mut labels_storage = BTreeSet::new();
+                    for cstr in labels_slice.iter() {
+                        if let Some(label_string) = util::opt_owned_cstr(*cstr)? {
+                            labels_storage.insert(label_string);
+                        }
+                    }
+                    labels_storage
+                };
+                Some(OwnedField::Scalar(
+                    None,
+                    ScalarField::UnsignedEnumeration(v, l),
+                ))
+            }
+            SignedEnumeration => {
+                let v = unsafe { ffi::bt_field_integer_signed_get_value(self.field) };
+                let l = unsafe {
+                    let mut labels = ptr::null();
+                    let mut count = 0;
+                    ffi::bt_field_enumeration_signed_get_mapping_labels(
+                        self.field,
+                        &mut labels,
+                        &mut count,
+                    )
+                    .capi_result()?;
+                    let labels_slice = if count == 0 || labels.is_null() {
+                        &[]
+                    } else {
+                        slice::from_raw_parts(labels, count as _)
+                    };
+                    let mut labels_storage = BTreeSet::new();
+                    for cstr in labels_slice.iter() {
+                        if let Some(label_string) = util::opt_owned_cstr(*cstr)? {
+                            labels_storage.insert(label_string);
+                        }
+                    }
+                    labels_storage
+                };
+                Some(OwnedField::Scalar(
+                    None,
+                    ScalarField::SignedEnumeration(v, l),
+                ))
             }
             Structure => {
                 let num_members =
@@ -129,6 +188,8 @@ pub enum FieldType {
     SinglePrecisionReal,
     DoublePrecisionReal,
     String,
+    UnsignedEnumeration,
+    SignedEnumeration,
     Structure,
     Unsupported(ffi::bt_field_class_type::Type),
 }
@@ -144,6 +205,8 @@ impl FieldType {
             BT_FIELD_CLASS_TYPE_SINGLE_PRECISION_REAL => SinglePrecisionReal,
             BT_FIELD_CLASS_TYPE_DOUBLE_PRECISION_REAL => DoublePrecisionReal,
             BT_FIELD_CLASS_TYPE_STRING => String,
+            BT_FIELD_CLASS_TYPE_UNSIGNED_ENUMERATION => UnsignedEnumeration,
+            BT_FIELD_CLASS_TYPE_SIGNED_ENUMERATION => SignedEnumeration,
             BT_FIELD_CLASS_TYPE_STRUCTURE => Structure,
             _ => Unsupported(raw),
         }
@@ -194,6 +257,8 @@ pub enum ScalarField {
     SinglePrecisionReal(OrderedFloat<f32>),
     DoublePrecisionReal(OrderedFloat<f64>),
     String(String),
+    UnsignedEnumeration(u64, BTreeSet<String>),
+    SignedEnumeration(i64, BTreeSet<String>),
 }
 
 impl fmt::Display for ScalarField {
@@ -205,7 +270,25 @@ impl fmt::Display for ScalarField {
             SignedInteger(v) => write!(f, "{}", v),
             SinglePrecisionReal(v) => write!(f, "{}", v),
             DoublePrecisionReal(v) => write!(f, "{}", v),
-            String(v) => write!(f, "\"{}\"", v),
+            String(v) => write!(f, "'{}'", v),
+            UnsignedEnumeration(v, l) => write!(
+                f,
+                "([{}] : container = {})",
+                l.iter()
+                    .map(|label| format!("'{}'", label))
+                    .collect::<Vec<std::string::String>>()
+                    .join(", "),
+                v
+            ),
+            SignedEnumeration(v, l) => write!(
+                f,
+                "([{}] : container = {})",
+                l.iter()
+                    .map(|label| format!("'{}'", label))
+                    .collect::<Vec<std::string::String>>()
+                    .join(", "),
+                v
+            ),
         }
     }
 }
