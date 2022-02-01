@@ -62,10 +62,12 @@ impl Event {
         let payload = self.payload()?;
         let specific_context = self.specific_context()?;
         let common_context = self.common_context()?;
+        let packet_context = self.packet_context()?;
         Ok(EventProperties {
             payload,
             specific_context,
             common_context,
+            packet_context,
         })
     }
 
@@ -87,6 +89,17 @@ impl Event {
 
     pub fn common_context(&self) -> BtResult<Option<OwnedField>> {
         let field = unsafe { ffi::bt_event_borrow_common_context_field_const(self.inner) };
+        Ok(Field::from_raw(field)
+            .map(|f| f.to_owned())
+            .transpose()?
+            .flatten())
+    }
+
+    pub fn packet_context(&self) -> BtResult<Option<OwnedField>> {
+        let field = unsafe {
+            let pkt = ffi::bt_event_borrow_packet_const(self.inner);
+            ffi::bt_packet_borrow_context_field_const(pkt)
+        };
         Ok(Field::from_raw(field)
             .map(|f| f.to_owned())
             .transpose()?
@@ -127,6 +140,9 @@ impl fmt::Display for OwnedEvent {
         if let Some(t) = &self.properties.common_context {
             write!(f, "\n  common context: {{ {} }}", t)?;
         }
+        if let Some(t) = &self.properties.packet_context {
+            write!(f, "\n  packet context: {{ {} }}", t)?;
+        }
         Ok(())
     }
 }
@@ -143,6 +159,7 @@ pub struct EventProperties {
     pub payload: Option<OwnedField>,
     pub specific_context: Option<OwnedField>,
     pub common_context: Option<OwnedField>,
+    pub packet_context: Option<OwnedField>,
 }
 
 pub type EventId = u64;
