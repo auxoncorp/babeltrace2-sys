@@ -1,8 +1,21 @@
 #![deny(warnings, clippy::all)]
 
-use std::fs;
+use std::{env, fs};
 
 fn main() {
+    // Setup pkg-config if cross-compiling
+    let host_triple = env::var("HOST").unwrap();
+    let target_triple = env::var("TARGET").unwrap();
+    if host_triple != target_triple {
+        // NOTE: only setup for aarch64-unknown-linux-gnu atm
+        if target_triple.as_str() == "aarch64-unknown-linux-gnu" {
+            env::set_var(
+                "PKG_CONFIG_PATH_aarch64-unknown-linux-gnu",
+                "/usr/lib/aarch64-linux-gnu/pkgconfig",
+            )
+        }
+    }
+
     let mut config = autotools::Config::new("vendor/babeltrace");
     config.reconf("-vif");
     config.enable("built-in-plugins", None);
