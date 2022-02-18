@@ -5,7 +5,7 @@ set -e
 # address, leak, memory or thread
 SAN="${SAN:=leak}"
 
-# Run with example options: ./run-example-with-sanitizer fs -i /tmp/trace
+# Run with example options: ./run-example-with-sanitizer fs /tmp/trace
 RUSTFLAGS="-Z sanitizer=$SAN" cargo +nightly run --target x86_64-unknown-linux-gnu --example decode -- "$@"
 
 exit 0

@@ -41,7 +41,7 @@ enum Cmd {
         force_clock_class_origin_unix_epoch: Option<bool>,
 
         /// Path to trace directories
-        #[structopt(short = "i", long = "input", name = "input")]
+        #[structopt(name = "input", required = true, min_values = 1)]
         inputs: Vec<PathBuf>,
     },
 

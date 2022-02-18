@@ -132,16 +132,16 @@ impl fmt::Display for OwnedEvent {
             write!(f, "\n  log_level: {:?}", t)?;
         }
         if let Some(t) = &self.properties.payload {
-            write!(f, "\n  payload: {{ {} }}", t)?;
+            write!(f, "\n  payload: {}", t)?;
         }
         if let Some(t) = &self.properties.specific_context {
-            write!(f, "\n  specific context: {{ {} }}", t)?;
+            write!(f, "\n  specific context: {}", t)?;
         }
         if let Some(t) = &self.properties.common_context {
-            write!(f, "\n  common context: {{ {} }}", t)?;
+            write!(f, "\n  common context: {}", t)?;
         }
         if let Some(t) = &self.properties.packet_context {
-            write!(f, "\n  packet context: {{ {} }}", t)?;
+            write!(f, "\n  packet context: {}", t)?;
         }
         Ok(())
     }

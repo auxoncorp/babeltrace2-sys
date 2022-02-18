@@ -25,38 +25,52 @@ impl Field {
     }
 
     pub fn to_owned(self) -> BtResult<Option<OwnedField>> {
+        // Root structure doesn't have a field name
+        self.to_owned_inner(None)
+    }
+
+    fn to_owned_inner(&self, maybe_field_name: Option<String>) -> BtResult<Option<OwnedField>> {
         use FieldType::*;
         Ok(match self.get_type() {
             Bool => {
                 let v = unsafe { ffi::bt_field_bool_get_value(self.field) };
-                Some(OwnedField::Scalar(None, ScalarField::Bool(v != 0)))
+                Some(OwnedField::Scalar(
+                    maybe_field_name,
+                    ScalarField::Bool(v != 0),
+                ))
             }
             UnsignedInteger => {
                 let v = unsafe { ffi::bt_field_integer_unsigned_get_value(self.field) };
-                Some(OwnedField::Scalar(None, ScalarField::UnsignedInteger(v)))
+                Some(OwnedField::Scalar(
+                    maybe_field_name,
+                    ScalarField::UnsignedInteger(v),
+                ))
             }
             SignedInteger => {
                 let v = unsafe { ffi::bt_field_integer_signed_get_value(self.field) };
-                Some(OwnedField::Scalar(None, ScalarField::SignedInteger(v)))
+                Some(OwnedField::Scalar(
+                    maybe_field_name,
+                    ScalarField::SignedInteger(v),
+                ))
             }
             SinglePrecisionReal => {
                 let v = unsafe { ffi::bt_field_real_single_precision_get_value(self.field) };
                 Some(OwnedField::Scalar(
-                    None,
+                    maybe_field_name,
                     ScalarField::SinglePrecisionReal(v.into()),
                 ))
             }
             DoublePrecisionReal => {
                 let v = unsafe { ffi::bt_field_real_double_precision_get_value(self.field) };
                 Some(OwnedField::Scalar(
-                    None,
+                    maybe_field_name,
                     ScalarField::DoublePrecisionReal(v.into()),
                 ))
             }
             String => {
                 let raw = unsafe { ffi::bt_field_string_get_value(self.field) };
                 if let Some(v) = util::opt_owned_cstr(raw)? {
-                    Some(OwnedField::Scalar(None, ScalarField::String(v)))
+                    Some(OwnedField::Scalar(maybe_field_name, ScalarField::String(v)))
                 } else {
                     log::trace!("Skipping empty field string");
                     None
@@ -87,7 +101,7 @@ impl Field {
                     labels_storage
                 };
                 Some(OwnedField::Scalar(
-                    None,
+                    maybe_field_name,
                     ScalarField::UnsignedEnumeration(v, l),
                 ))
             }
@@ -116,13 +130,14 @@ impl Field {
                     labels_storage
                 };
                 Some(OwnedField::Scalar(
-                    None,
+                    maybe_field_name,
                     ScalarField::SignedEnumeration(v, l),
                 ))
             }
             Structure => {
                 let num_members =
                     unsafe { ffi::bt_field_class_structure_get_member_count(self.class) };
+
                 if num_members > 0 {
                     let mut members = Vec::new();
                     for midx in 0..num_members {
@@ -146,16 +161,13 @@ impl Field {
                         } else {
                             let mname_cstr =
                                 unsafe { ffi::bt_field_class_structure_member_get_name(mclass) };
+                            let mname = util::opt_owned_cstr(mname_cstr)?;
 
-                            if let Some(mut f) = Field::from_raw(mfield)
-                                .map(|f| f.to_owned())
+                            if let Some(f) = Field::from_raw(mfield)
+                                .map(|f| f.to_owned_inner(mname))
                                 .transpose()?
                                 .flatten()
                             {
-                                if let OwnedField::Scalar(n, _v) = &mut f {
-                                    *n = util::opt_owned_cstr(mname_cstr)?;
-                                }
-
                                 members.push(f);
                             }
                         }
@@ -165,7 +177,7 @@ impl Field {
                     if members.is_empty() {
                         None
                     } else {
-                        Some(OwnedField::Structure(members))
+                        Some(OwnedField::Structure(maybe_field_name, members))
                     }
                 } else {
                     None
@@ -221,29 +233,32 @@ impl FieldType {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum OwnedField {
     Scalar(Option<String>, ScalarField),
-    // TODO: in the future, call this Container, one of structure, array, option, variant
-    Structure(Vec<OwnedField>),
+    // NOTE: in the future, call this Container, one of structure, array, option, variant
+    Structure(Option<String>, Vec<OwnedField>),
 }
 
 impl fmt::Display for OwnedField {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use OwnedField::*;
         match self {
-            Scalar(n, v) => write!(
+            Scalar(name, value) => write!(
                 f,
                 "{} = {}",
-                n.as_ref().map(|s| s.as_str()).unwrap_or("<anonymous>"),
-                v
+                name.as_ref().map(|s| s.as_str()).unwrap_or("<anonymous>"),
+                value
             ),
-            Structure(fields) => write!(
-                f,
-                "{}",
-                fields
+            Structure(name, fields) => {
+                let fields_string = fields
                     .iter()
                     .map(|s| s.to_string())
                     .collect::<Vec<String>>()
-                    .join(", ")
-            ),
+                    .join(", ");
+                if let Some(n) = name {
+                    write!(f, "{} = {{ {} }}", n, fields_string)
+                } else {
+                    write!(f, "{{ {} }}", fields_string)
+                }
+            }
         }
     }
 }
