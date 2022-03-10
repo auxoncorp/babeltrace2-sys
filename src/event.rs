@@ -30,7 +30,7 @@ impl Event {
     }
 
     pub fn clock_snapshot(&self) -> Option<ClockNanoseconds> {
-        self.clock_snapshot.map(|c| c.ns_from_origin()).flatten()
+        self.clock_snapshot.and_then(|c| c.ns_from_origin())
     }
 
     pub fn class_properties(&self) -> BtResult<EventClassProperties> {

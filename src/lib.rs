@@ -37,6 +37,8 @@ mod trace;
 mod utils_plugin;
 mod value;
 
+pub mod internal_api;
+
 pub use clock::*;
 pub use component::*;
 pub use component_class::*;

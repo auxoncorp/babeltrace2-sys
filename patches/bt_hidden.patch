@@ -1,0 +1,18 @@
+diff --git a/src/common/macros.h b/src/common/macros.h
+index ff7da410..a314ac9a 100644
+--- a/src/common/macros.h
++++ b/src/common/macros.h
+@@ -32,11 +32,13 @@
+  * On Windows, symbols are local unless explicitly exported,
+  * see https://gcc.gnu.org/wiki/Visibility
+  */
++#ifndef BT_HIDDEN
+ #if defined(_WIN32) || defined(__CYGWIN__)
+ #define BT_HIDDEN
+ #else
+ #define BT_HIDDEN __attribute__((visibility("hidden")))
+ #endif
++#endif
+ 
+ /*
+  * Yield `ref`'s value while setting `ref` to NULL.

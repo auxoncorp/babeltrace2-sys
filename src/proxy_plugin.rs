@@ -89,7 +89,7 @@ impl Drop for BoxedRawProxyPluginState {
 
 pub type ConsumeSuccessCode = ffi::bt_component_class_sink_consume_method_status::Type;
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum ConsumeError {
     NullState,
 
@@ -105,18 +105,14 @@ pub enum ConsumeError {
     Error(Error),
 }
 
-
 impl std::error::Error for ConsumeError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            ConsumeError::NullState
-            | ConsumeError::NullIterator => { None }
+            ConsumeError::NullState | ConsumeError::NullIterator => None,
             ConsumeError::MessageIterator(e)
             | ConsumeError::StreamBorrow(e)
             | ConsumeError::EventBorrow(e)
-            | ConsumeError::Error(e) => {
-                Some(e)
-            }
+            | ConsumeError::Error(e) => Some(e),
         }
     }
 }
@@ -124,12 +120,8 @@ impl std::error::Error for ConsumeError {
 impl std::fmt::Display for ConsumeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ConsumeError::NullState => {
-                f.write_str("Plugin state is NULL")
-            }
-            ConsumeError::NullIterator => {
-                f.write_str("Message iterator is NULL")
-            }
+            ConsumeError::NullState => f.write_str("Plugin state is NULL"),
+            ConsumeError::NullIterator => f.write_str("Message iterator is NULL"),
             ConsumeError::MessageIterator(e) => {
                 f.write_str("Message iterator returned an error. ")?;
                 e.fmt(f)
@@ -142,9 +134,7 @@ impl std::fmt::Display for ConsumeError {
                 f.write_str("Failed to borrow event. ")?;
                 e.fmt(f)
             }
-            ConsumeError::Error(e) => {
-                e.fmt(f)
-            }
+            ConsumeError::Error(e) => e.fmt(f),
         }
     }
 }

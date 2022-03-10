@@ -1,16 +1,37 @@
 #!/usr/bin/env bash
+# Run with includes: ./regen-bindings -I path/to/babeltrace/include ...
+#
+# ./regen-bindings
+#   -I ./target/debug/build/babeltrace2-sys-abc/out/include/
+#   -I vendor/babeltrace/src/plugins/ctf
+#   -I vendor/babeltrace/src
+#   -DBT_HIDDEN=
+#   $(pkg-config --cflags-only-I glib-2.0)
 
 set -e
 
 bindgen \
     bindgen/wrapper.h \
     -o src/bindings.rs \
+    --no-rustfmt-bindings \
     --no-derive-debug \
     --no-include-path-detection \
     --default-enum-style moduleconsts \
     --enable-function-attribute-detection \
+    --allowlist-function ".*?bt_.*" \
+    --allowlist-function "ctf_metadata_.*" \
+    --allowlist-function "ctf_msg_iter_.*" \
+    --allowlist-type ".*?bt_.*" \
+    --allowlist-type "ctf_metadata_.*" \
+    --allowlist-type "ctf_msg_iter_.*" \
+    --allowlist-var ".*?bt_.*" \
+    --allowlist-var "ctf_metadata_.*" \
+    --allowlist-var "ctf_msg_iter_.*" \
     --no-copy "bt_plugin.*" \
-    -- -I "$@"
+    --opaque-type FILE \
+    --blocklist-type FILE \
+    --raw-line "use libc::FILE;" \
+    -- "$@"
 
 rustfmt src/bindings.rs
 

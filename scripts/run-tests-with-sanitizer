@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -e
+
+# address, leak, memory or thread
+SAN="${SAN:=leak}"
+
+RUSTFLAGS="-Z sanitizer=$SAN" cargo +nightly test --features "test"
+
+exit 0

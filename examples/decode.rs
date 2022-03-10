@@ -1,3 +1,5 @@
+#![deny(warnings, clippy::all)]
+
 use babeltrace2_sys::*;
 use std::ffi::{CString, NulError};
 use std::os::unix::ffi::OsStrExt;
