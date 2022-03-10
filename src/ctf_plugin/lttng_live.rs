@@ -20,7 +20,7 @@ pub enum SessionNotFoundAction {
     End,
 }
 
-/// https://babeltrace.org/docs/v2.0/man7/babeltrace2-source.ctf.lttng-live.7/#doc-_initialization_parameters
+/// See <https://babeltrace.org/docs/v2.0/man7/babeltrace2-source.ctf.lttng-live.7/#doc-_initialization_parameters>
 pub struct CtfPluginSourceLttnLiveInitParams {
     params: Value,
     _inputs_val: Value,

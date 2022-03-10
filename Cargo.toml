@@ -1,6 +1,6 @@
 [package]
 name = "babeltrace2-sys"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["Jon Lamb <jon@auxon.io>"]
 edition = "2018"
 build = "build.rs"
@@ -8,6 +8,8 @@ links = "babeltrace2"
 description = "Rust sys crate for babeltrace2"
 homepage = "https://babeltrace.org/"
 license = "MIT"
+repository = "https://github.com/auxoncorp/babeltrace2-sys"
+documentation = "https://docs.rs/babeltrace2-sys"
 
 [features]
 test = []

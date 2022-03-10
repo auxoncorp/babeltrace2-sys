@@ -6,7 +6,7 @@ use std::ffi::CStr;
 mod fs;
 mod lttng_live;
 
-/// https://babeltrace.org/docs/v2.0/man7/babeltrace2-source.ctf.fs.7/
+/// See <https://babeltrace.org/docs/v2.0/man7/babeltrace2-source.ctf.fs.7/>
 pub struct CtfPlugin(Plugin);
 
 impl CtfPlugin {

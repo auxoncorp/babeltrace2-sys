@@ -1,7 +1,7 @@
 use crate::{BtResult, ComponentClassFilter, Plugin};
 use std::ffi::CStr;
 
-/// https://babeltrace.org/docs/v2.0/man7/babeltrace2-filter.utils.muxer.7/
+/// See <https://babeltrace.org/docs/v2.0/man7/babeltrace2-filter.utils.muxer.7/>
 pub struct UtilsPlugin(Plugin);
 
 impl UtilsPlugin {

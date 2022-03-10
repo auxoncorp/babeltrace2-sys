@@ -1,7 +1,7 @@
 use crate::{BtResult, CtfPlugin, CtfPluginSrcExt, Error, Value};
 use std::ffi::CStr;
 
-/// https://babeltrace.org/docs/v2.0/man7/babeltrace2-source.ctf.fs.7/#doc-_initialization_parameters
+/// See <https://babeltrace.org/docs/v2.0/man7/babeltrace2-source.ctf.fs.7/#doc-_initialization_parameters>
 pub struct CtfPluginSourceFsInitParams {
     params: Value,
     _inputs_val: Value,

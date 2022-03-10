@@ -13,6 +13,7 @@ set -e
 bindgen \
     bindgen/wrapper.h \
     -o src/bindings.rs \
+    --no-doc-comments \
     --no-rustfmt-bindings \
     --no-derive-debug \
     --no-include-path-detection \
