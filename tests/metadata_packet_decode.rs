@@ -97,10 +97,10 @@ fn metadata_packet_decode_w_post_garbage() {
         max_request_size: 64,
     };
 
+    let mut dec = PacketDecoder::new(&metadata_path, &cfg).unwrap();
+
     let mut data = packets::A.to_vec();
     data.extend_from_slice(&[0x65, 0x65, 0x6C, 0x20]);
-
-    let mut dec = PacketDecoder::new(&metadata_path, &cfg).unwrap();
 
     let props = dec.packet_properties(&data).unwrap().unwrap();
     log::debug!("{}", props);
@@ -141,12 +141,12 @@ fn metadata_packet_decode_only_garbage() {
         max_request_size: 64,
     };
 
+    let mut dec = PacketDecoder::new(&metadata_path, &cfg).unwrap();
+
     let data = vec![
         0x66, 0x65, 0x65, 0x6C, 0x20, 0x66, 0x65, 0x65, 0x6C, 0x20, 0x66, 0x65, 0x65, 0x6C, 0x20,
         0x66, 0x65, 0x65, 0x6C, 0x20,
     ];
-
-    let mut dec = PacketDecoder::new(&metadata_path, &cfg).unwrap();
 
     assert!(dec.packet_properties(&data).is_err());
 }

@@ -38,13 +38,13 @@ impl Default for PacketDecoderConfig {
     }
 }
 
-pub struct PacketDecoder<'buf> {
+pub struct PacketDecoder {
     md_dec: *mut ffi::ctf_metadata_decoder,
     msg_iter: *mut ffi::ctf_msg_iter,
-    state: BoxedRawMsgIterState<'buf>,
+    state: BoxedRawMsgIterState,
 }
 
-impl<'buf> PacketDecoder<'buf> {
+impl PacketDecoder {
     pub fn new<P: AsRef<Path>>(metadata_path: P, config: &PacketDecoderConfig) -> BtResult<Self> {
         let md_path = metadata_path.as_ref();
         if !md_path.exists() {
@@ -164,9 +164,9 @@ impl<'buf> PacketDecoder<'buf> {
         })
     }
 
-    pub fn packet_properties(&mut self, packet: &'buf [u8]) -> BtResult<Option<PacketProperties>> {
+    pub fn packet_properties(&mut self, packet: &[u8]) -> BtResult<Option<PacketProperties>> {
         unsafe { ffi::ctf_msg_iter_reset(self.msg_iter) };
-        self.state.reset(packet);
+        self.state.set_buf(packet);
         let mut props = ffi::ctf_msg_iter_packet_properties {
             exp_packet_total_size: 0,
             exp_packet_content_size: 0,
@@ -180,6 +180,7 @@ impl<'buf> PacketDecoder<'buf> {
             },
         };
         let status = unsafe { ffi::ctf_msg_iter_get_packet_properties(self.msg_iter, &mut props) };
+        self.state.reset();
         match status {
             ffi::ctf_msg_iter_status::CTF_MSG_ITER_STATUS_OK => Ok(Some(props.into())),
             ffi::ctf_msg_iter_status::CTF_MSG_ITER_STATUS_EOF
@@ -189,7 +190,7 @@ impl<'buf> PacketDecoder<'buf> {
     }
 }
 
-impl<'buf> Drop for PacketDecoder<'buf> {
+impl Drop for PacketDecoder {
     fn drop(&mut self) {
         unsafe {
             ffi::ctf_msg_iter_destroy(self.msg_iter);
@@ -198,28 +199,30 @@ impl<'buf> Drop for PacketDecoder<'buf> {
     }
 }
 
-struct MsgIterState<'buf> {
+struct MsgIterState {
     comp_class: ffi::bt_component_class,
     comp: *mut ffi::bt_component,
     trace: *mut ffi::bt_trace,
     read_index: usize,
-    packet: &'buf [u8],
+    packet: *const u8,
+    packet_size: usize,
 }
 
-struct BoxedRawMsgIterState<'buf>(*mut MsgIterState<'buf>);
+struct BoxedRawMsgIterState(*mut MsgIterState);
 
-impl<'buf> BoxedRawMsgIterState<'buf> {
+impl BoxedRawMsgIterState {
     fn new_null() -> Self {
         BoxedRawMsgIterState(Box::into_raw(Box::new(MsgIterState {
             trace: ptr::null_mut(),
             comp_class: unsafe { mem::zeroed() },
             comp: ptr::null_mut(),
             read_index: 0,
-            packet: &[],
+            packet: ptr::null(),
+            packet_size: 0,
         })))
     }
 
-    fn as_raw(&mut self) -> *mut MsgIterState<'buf> {
+    fn as_raw(&mut self) -> *mut MsgIterState {
         self.0
     }
 
@@ -228,25 +231,32 @@ impl<'buf> BoxedRawMsgIterState<'buf> {
         self.as_mut().trace = trace;
     }
 
-    fn reset(&mut self, packet: &'buf [u8]) {
+    fn reset(&mut self) {
         self.as_mut().read_index = 0;
-        self.as_mut().packet = packet;
+        self.as_mut().packet = ptr::null();
+        self.as_mut().packet_size = 0;
+    }
+
+    fn set_buf(&mut self, packet: &[u8]) {
+        self.reset();
+        self.as_mut().packet = packet.as_ptr();
+        self.as_mut().packet_size = packet.len();
     }
 }
 
-impl<'buf> AsRef<MsgIterState<'buf>> for BoxedRawMsgIterState<'buf> {
-    fn as_ref(&self) -> &MsgIterState<'buf> {
+impl AsRef<MsgIterState> for BoxedRawMsgIterState {
+    fn as_ref(&self) -> &MsgIterState {
         unsafe { &(*self.0) }
     }
 }
 
-impl<'buf> AsMut<MsgIterState<'buf>> for BoxedRawMsgIterState<'buf> {
-    fn as_mut(&mut self) -> &mut MsgIterState<'buf> {
+impl AsMut<MsgIterState> for BoxedRawMsgIterState {
+    fn as_mut(&mut self) -> &mut MsgIterState {
         unsafe { &mut (*self.as_raw()) }
     }
 }
 
-impl<'buf> Drop for BoxedRawMsgIterState<'buf> {
+impl Drop for BoxedRawMsgIterState {
     fn drop(&mut self) {
         debug_assert!(!self.0.is_null());
         unsafe {
@@ -275,26 +285,31 @@ extern "C" fn msg_iter_request_bytes(
     let state_raw = data as *mut MsgIterState;
     let state = unsafe { &mut (*state_raw) };
 
-    if state.packet.is_empty() {
+    if state.packet.is_null() {
+        unsafe {
+            *buffer_addr = ptr::null_mut();
+            *buffer_sz = 0;
+        }
+        ffi::ctf_msg_iter_medium_status::CTF_MSG_ITER_MEDIUM_STATUS_ERROR
+    } else if state.packet_size == 0 {
         unsafe {
             *buffer_addr = ptr::null_mut();
             *buffer_sz = 0;
         }
         ffi::ctf_msg_iter_medium_status::CTF_MSG_ITER_MEDIUM_STATUS_AGAIN
-    } else if state.read_index == state.packet.len() {
+    } else if state.read_index == state.packet_size {
         unsafe {
             *buffer_addr = ptr::null_mut();
             *buffer_sz = 0;
         }
         ffi::ctf_msg_iter_medium_status::CTF_MSG_ITER_MEDIUM_STATUS_EOF
     } else {
-        let max_len = cmp::min(request_sz as usize, state.packet.len() - state.read_index);
-        let start = state.read_index;
-        let end = state.read_index + max_len;
-        let data = &state.packet[start..end];
+        debug_assert!(state.packet_size > state.read_index);
+        let max_len = cmp::min(request_sz as usize, state.packet_size - state.read_index);
+        let start = unsafe { state.packet.add(state.read_index) };
         unsafe {
-            *buffer_addr = data.as_ptr() as *const _ as *mut _; // msg_iter doesn't modify buffer
-            *buffer_sz = data.len() as _;
+            *buffer_addr = start as *mut _; // msg_iter doesn't modify buffer but isn't const in the decl
+            *buffer_sz = max_len as _;
         }
         ffi::ctf_msg_iter_medium_status::CTF_MSG_ITER_MEDIUM_STATUS_OK
     }
