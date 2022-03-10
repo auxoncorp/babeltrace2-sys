@@ -22,6 +22,7 @@ bindgen \
     --allowlist-function ".*?bt_.*" \
     --allowlist-function "ctf_metadata_.*" \
     --allowlist-function "ctf_msg_iter_.*" \
+    --allowlist-function "g_string_new" \
     --allowlist-type ".*?bt_.*" \
     --allowlist-type "ctf_metadata_.*" \
     --allowlist-type "ctf_msg_iter_.*" \

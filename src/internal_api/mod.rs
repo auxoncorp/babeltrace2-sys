@@ -65,6 +65,10 @@ impl<'buf> PacketDecoder<'buf> {
         let mut state = BoxedRawMsgIterState::new_null();
 
         // Forge a component class and component for use by the decoder and msg-iter
+        let name = CString::new("forged-msg-iter")?;
+        state.as_mut().comp_class.name = unsafe { ffi::g_string_new(name.as_c_str().as_ptr()) };
+        state.as_mut().comp_class.plugin_name =
+            unsafe { ffi::g_string_new(name.as_c_str().as_ptr()) };
         state.as_mut().comp_class.type_ =
             ffi::bt_component_class_type::BT_COMPONENT_CLASS_TYPE_SOURCE;
         state.as_mut().comp_class.base.is_shared = true;
@@ -73,7 +77,7 @@ impl<'buf> PacketDecoder<'buf> {
         let comp_status = unsafe {
             ffi::bt_component_create(
                 &mut state.as_mut().comp_class,
-                CString::new("msg-iter").unwrap().as_c_str().as_ptr(),
+                name.as_c_str().as_ptr(),
                 config.log_level.into(),
                 &mut comp,
             )
@@ -142,7 +146,7 @@ impl<'buf> PacketDecoder<'buf> {
                 msg_iter_med_opts,
                 state.as_raw() as *mut c_void,
                 config.log_level.into(),
-                ptr::null_mut(),
+                comp as *mut ffi::bt_self_component, // bt_self_t is a cast of bt_t
                 ptr::null_mut(),
             )
         };
@@ -250,6 +254,7 @@ impl<'buf> Drop for BoxedRawMsgIterState<'buf> {
             ffi::bt_trace_put_ref(self.as_ref().trace);
             debug_assert!(!self.as_ref().comp.is_null());
             ffi::bt_component_put_ref(self.as_ref().comp);
+            ffi::bt_current_thread_clear_error();
             drop(Box::from_raw(self.0));
         }
     }

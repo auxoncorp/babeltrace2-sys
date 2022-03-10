@@ -79,7 +79,7 @@ fn metadata_packet_decode() {
 }
 
 #[test]
-fn metadata_packet_decode_w_pre_garbage() {
+fn metadata_packet_decode_w_post_garbage() {
     init_logging();
 
     let td = tempfile::tempdir().unwrap();
@@ -97,12 +97,12 @@ fn metadata_packet_decode_w_pre_garbage() {
         max_request_size: 64,
     };
 
+    let mut data = packets::A.to_vec();
+    data.extend_from_slice(&[0x65, 0x65, 0x6C, 0x20]);
+
     let mut dec = PacketDecoder::new(&metadata_path, &cfg).unwrap();
 
-    let mut data = vec![0x66, 0x65, 0x65, 0x6C, 0x20];
-    data.extend_from_slice(&packets::A);
-
-    let props = dec.packet_properties(&packets::A).unwrap().unwrap();
+    let props = dec.packet_properties(&data).unwrap().unwrap();
     log::debug!("{}", props);
     assert_eq!(
         props,
@@ -117,10 +117,13 @@ fn metadata_packet_decode_w_pre_garbage() {
             end_clock: 4.into(),
         }
     );
+
+    let size_bytes = props.packet_total_size_bits.unwrap() as usize / 8;
+    assert_eq!(&data[..size_bytes], &packets::A[..]);
 }
 
 #[test]
-fn metadata_packet_decode_w_pre_and_post_garbage() {
+fn metadata_packet_decode_only_garbage() {
     init_logging();
 
     let td = tempfile::tempdir().unwrap();
@@ -138,27 +141,14 @@ fn metadata_packet_decode_w_pre_and_post_garbage() {
         max_request_size: 64,
     };
 
+    let data = vec![
+        0x66, 0x65, 0x65, 0x6C, 0x20, 0x66, 0x65, 0x65, 0x6C, 0x20, 0x66, 0x65, 0x65, 0x6C, 0x20,
+        0x66, 0x65, 0x65, 0x6C, 0x20,
+    ];
+
     let mut dec = PacketDecoder::new(&metadata_path, &cfg).unwrap();
 
-    let mut data = vec![0x66, 0x65, 0x65, 0x6C, 0x20];
-    data.extend_from_slice(&packets::A);
-    data.extend_from_slice(&[0x65, 0x65, 0x6C, 0x20]);
-
-    let props = dec.packet_properties(&packets::A).unwrap().unwrap();
-    log::debug!("{}", props);
-    assert_eq!(
-        props,
-        PacketProperties {
-            packet_total_size_bits: 512.into(),
-            packet_content_size_bits: 512.into(),
-            stream_class_id: 1.into(),
-            data_stream_id: None,
-            discarded_events: 0.into(),
-            packet_seq_num: 1.into(),
-            beginning_clock: 3.into(),
-            end_clock: 4.into(),
-        }
-    );
+    assert!(dec.packet_properties(&data).is_err());
 }
 
 // Regen these from stream binary file: hexdump -ve '1/1 "0x%.2X, "' stream.bin

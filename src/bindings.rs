@@ -5800,6 +5800,9 @@ fn bindgen_test_layout__GString() {
     );
 }
 extern "C" {
+    pub fn g_string_new(init: *const gchar) -> *mut GString;
+}
+extern "C" {
     pub fn bt_common_assert_failed(
         file: *const ::std::os::raw::c_char,
         line: ::std::os::raw::c_int,
