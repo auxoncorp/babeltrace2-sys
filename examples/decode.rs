@@ -269,7 +269,11 @@ pub mod proxy_plugin_descriptors {
 pub mod utils_plugin_descriptors {
     use babeltrace2_sys::ffi::*;
 
-    #[link(name = "babeltrace-plugin-utils", kind = "static")]
+    #[link(
+        name = "babeltrace-plugin-utils",
+        kind = "static",
+        modifiers = "+whole-archive"
+    )]
     extern "C" {
         pub static __bt_plugin_descriptor_auto_ptr: *const __bt_plugin_descriptor;
     }
@@ -278,7 +282,11 @@ pub mod utils_plugin_descriptors {
 pub mod ctf_plugin_descriptors {
     use babeltrace2_sys::ffi::*;
 
-    #[link(name = "babeltrace-plugin-ctf", kind = "static")]
+    #[link(
+        name = "babeltrace-plugin-ctf",
+        kind = "static",
+        modifiers = "+whole-archive"
+    )]
     extern "C" {
         pub static __bt_plugin_descriptor_auto_ptr: *const __bt_plugin_descriptor;
     }
