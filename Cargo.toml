@@ -1,6 +1,6 @@
 [package]
 name = "babeltrace2-sys"
-version = "0.2.7"
+version = "0.2.8"
 authors = ["Jon Lamb <jon@auxon.io>"]
 edition = "2018"
 build = "build.rs"
@@ -20,14 +20,14 @@ pkg-config = "0.3"
 
 [dependencies]
 log = "0.4"
-uuid = { version = "0.8", features = ["v5"] }
-ordered-float = { version = "2.2.0", default-features = false }
+uuid = { version = "1.1.2", features = ["v5"] }
+ordered-float = { version = "3.2.0", default-features = false }
 libc = "0.2"
-thiserror = "1.0.30"
+thiserror = "1.0"
 
 [dev-dependencies]
 structopt = "0.3"
 ctrlc = "3.2"
-env_logger = "0.8"
-url = "2.1"
+env_logger = "0.9"
+url = "2.3"
 tempfile = "3.3"
