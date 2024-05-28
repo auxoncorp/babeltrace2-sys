@@ -1,6 +1,6 @@
 [package]
 name = "babeltrace2-sys"
-version = "0.2.8"
+version = "0.3.0"
 authors = ["Jon Lamb <jon@auxon.io>"]
 edition = "2018"
 build = "build.rs"

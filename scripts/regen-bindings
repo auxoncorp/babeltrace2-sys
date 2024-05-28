@@ -33,6 +33,7 @@ bindgen \
     --opaque-type FILE \
     --blocklist-type FILE \
     --raw-line "use libc::FILE;" \
+    --raw-line "pub use libc::size_t;" \
     -- "$@"
 
 rustfmt src/bindings.rs
