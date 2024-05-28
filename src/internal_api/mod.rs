@@ -305,7 +305,7 @@ extern "C" fn msg_iter_request_bytes(
         ffi::ctf_msg_iter_medium_status::CTF_MSG_ITER_MEDIUM_STATUS_EOF
     } else {
         debug_assert!(state.packet_size > state.read_index);
-        let max_len = cmp::min(request_sz as usize, state.packet_size - state.read_index);
+        let max_len = cmp::min(request_sz, state.packet_size - state.read_index);
         let start = unsafe { state.packet.add(state.read_index) };
         unsafe {
             *buffer_addr = start as *mut _; // msg_iter doesn't modify buffer but isn't const in the decl

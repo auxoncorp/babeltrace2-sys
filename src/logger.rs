@@ -2,7 +2,7 @@ use crate::ffi;
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub enum LoggingLevel {
     Trace,
     Debug,
@@ -10,13 +10,8 @@ pub enum LoggingLevel {
     Warn,
     Error,
     Fatal,
+    #[default]
     None,
-}
-
-impl Default for LoggingLevel {
-    fn default() -> Self {
-        LoggingLevel::None
-    }
 }
 
 pub struct Logger;

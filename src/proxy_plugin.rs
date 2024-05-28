@@ -54,7 +54,7 @@ pub struct BoxedRawProxyPluginState(*mut ProxyPluginState);
 
 impl BoxedRawProxyPluginState {
     pub fn new() -> Self {
-        BoxedRawProxyPluginState(Box::into_raw(Box::new(ProxyPluginState::default())))
+        BoxedRawProxyPluginState(Box::into_raw(Box::default()))
     }
 
     pub(crate) fn as_raw(&mut self) -> *mut ProxyPluginState {
