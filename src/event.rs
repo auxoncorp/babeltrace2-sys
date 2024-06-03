@@ -2,6 +2,7 @@ use crate::{
     ffi, util, BtResult, ClockNanoseconds, ClockSnapshot, Error, Field, OwnedField, StreamId,
 };
 use std::fmt;
+use tracing::trace;
 
 pub struct Event {
     pub(crate) clock_snapshot: Option<ClockSnapshot>,
@@ -204,7 +205,7 @@ impl EventLogLevel {
             BT_EVENT_CLASS_LOG_LEVEL_DEBUG_LINE => DebugLine.into(),
             BT_EVENT_CLASS_LOG_LEVEL_DEBUG => Debug.into(),
             _ => {
-                log::trace!("Unsupported event log level {}", value);
+                trace!(%value, "Unsupported event log level");
                 None
             }
         }

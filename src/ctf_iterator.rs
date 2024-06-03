@@ -1,4 +1,4 @@
-use crate::common_pipeline::CommonPipeline;
+use crate::pipeline::DecoderPipeline;
 use crate::{
     BtResult, CtfPluginSourceFsInitParams, LoggingLevel, OwnedEvent, RunStatus, StreamProperties,
     TraceProperties,
@@ -6,13 +6,13 @@ use crate::{
 use std::collections::{BTreeSet, VecDeque};
 
 pub struct CtfIterator {
-    pipeline: CommonPipeline,
+    pipeline: DecoderPipeline,
     last_run_status: RunStatus,
 }
 
 impl CtfIterator {
     pub fn new(log_level: LoggingLevel, params: &CtfPluginSourceFsInitParams) -> BtResult<Self> {
-        let mut pipeline = CommonPipeline::new(log_level, params)?;
+        let mut pipeline = DecoderPipeline::new(log_level, params)?;
 
         // Do an initial run of the graph to connect and initialize all the components.
         // We'll have trace/stream metadata properties loaded and possibly some

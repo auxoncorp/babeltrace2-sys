@@ -1,4 +1,5 @@
 use crate::{ffi, BtResult, Error, MessageArray};
+use std::os::raw::c_void;
 use std::ptr;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
@@ -40,4 +41,36 @@ impl Drop for MessageIterator {
     fn drop(&mut self) {
         unsafe { ffi::bt_message_iterator_put_ref(self.inner) };
     }
+}
+
+pub struct SelfMessageIterator {
+    pub(crate) inner: *mut ffi::bt_self_message_iterator,
+}
+
+impl SelfMessageIterator {
+    pub(crate) fn from_raw(inner: *mut ffi::bt_self_message_iterator) -> Self {
+        debug_assert!(!inner.is_null());
+        Self { inner }
+    }
+
+    // TODO remove once high-level types/API exists
+    pub fn inner_mut(&mut self) -> *mut ffi::bt_self_message_iterator {
+        self.inner
+    }
+
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    pub fn set_c_user_data_ptr(&mut self, user_data: *mut c_void) {
+        unsafe { ffi::bt_self_message_iterator_set_data(self.inner, user_data) };
+    }
+
+    pub fn get_c_user_data_ptr(&mut self) -> *mut c_void {
+        unsafe { ffi::bt_self_message_iterator_get_data(self.inner as _) }
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+pub enum MessageIteratorStatus {
+    NoMessages,
+    Messages(u64), // count
+    Done,
 }

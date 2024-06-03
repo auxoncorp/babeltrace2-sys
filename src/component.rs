@@ -12,9 +12,14 @@ pub struct Component<T> {
 
 impl<T> Component<T> {
     pub const IN_PORT_NAME: &'static [u8] = b"in\0";
+    pub const OUT_PORT_NAME: &'static [u8] = b"out\0";
 
     pub fn in_port_name() -> &'static CStr {
         unsafe { CStr::from_bytes_with_nul_unchecked(Self::IN_PORT_NAME) }
+    }
+
+    pub fn out_port_name() -> &'static CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(Self::OUT_PORT_NAME) }
     }
 }
 

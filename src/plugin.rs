@@ -1,8 +1,9 @@
 use crate::{
     ffi, BtResult, BtResultExt, ComponentClassFilter, ComponentClassSink, ComponentClassSource,
-    Error,
+    Error, MessageIteratorStatus, SelfComponent, SelfMessageIterator,
 };
 use std::{ffi::CStr, ptr};
+use tracing::debug;
 
 pub struct Plugin {
     inner: *const ffi::bt_plugin,
@@ -10,7 +11,7 @@ pub struct Plugin {
 
 impl Plugin {
     pub fn load_from_statics_by_name(name: &CStr) -> BtResult<Self> {
-        log::debug!("Loading static plugin '{}'", name.to_string_lossy());
+        debug!("Loading static plugin '{}'", name.to_string_lossy());
 
         let find_in_std_env_var = 0;
         let find_in_user_dir = 0;
@@ -39,7 +40,7 @@ impl Plugin {
         &self,
         name: &CStr,
     ) -> BtResult<ComponentClassSource> {
-        log::debug!("Borrowing source component '{}'", name.to_string_lossy());
+        debug!("Borrowing source component '{}'", name.to_string_lossy());
         let inner = unsafe {
             ffi::bt_plugin_borrow_source_component_class_by_name_const(self.inner, name.as_ptr())
         };
@@ -51,7 +52,7 @@ impl Plugin {
     }
 
     pub fn borrow_sink_component_class_by_name(&self, name: &CStr) -> BtResult<ComponentClassSink> {
-        log::debug!("Borrowing sink component '{}'", name.to_string_lossy());
+        debug!("Borrowing sink component '{}'", name.to_string_lossy());
         let inner = unsafe {
             ffi::bt_plugin_borrow_sink_component_class_by_name_const(self.inner, name.as_ptr())
         };
@@ -66,7 +67,7 @@ impl Plugin {
         &self,
         name: &CStr,
     ) -> BtResult<ComponentClassFilter> {
-        log::debug!("Borrowing filter component '{}'", name.to_string_lossy());
+        debug!("Borrowing filter component '{}'", name.to_string_lossy());
         let inner = unsafe {
             ffi::bt_plugin_borrow_filter_component_class_by_name_const(self.inner, name.as_ptr())
         };
@@ -82,4 +83,31 @@ impl Drop for Plugin {
     fn drop(&mut self) {
         unsafe { ffi::bt_plugin_put_ref(self.inner) };
     }
+}
+
+pub trait SourcePluginDescriptor {
+    const PLUGIN_NAME: &'static [u8];
+    const OUTPUT_COMP_NAME: &'static [u8];
+    const GRAPH_NODE_NAME: &'static [u8];
+
+    fn load() -> BtResult<Plugin>;
+
+    fn plugin_name() -> &'static CStr;
+
+    fn output_name() -> &'static CStr;
+
+    fn graph_node_name() -> &'static CStr;
+}
+
+pub trait SourcePluginHandler {
+    fn initialize(&mut self, component: SelfComponent) -> Result<(), Error>;
+
+    fn finalize(&mut self, component: SelfComponent) -> Result<(), Error>;
+
+    // TODO - need a high-level wrapper type for this
+    fn iterator_next(
+        &mut self,
+        msg_iter: SelfMessageIterator,
+        messages: &mut [*const ffi::bt_message],
+    ) -> Result<MessageIteratorStatus, Error>;
 }

@@ -2,7 +2,7 @@
 name = "babeltrace2-sys"
 version = "0.3.1"
 authors = ["Jon Lamb <jon@auxon.io>"]
-edition = "2018"
+edition = "2021"
 build = "build.rs"
 links = "babeltrace2"
 description = "Rust sys crate for babeltrace2"
@@ -19,13 +19,14 @@ autotools = "0.2"
 pkg-config = "0.3"
 
 [dependencies]
-log = "0.4"
+tracing = "0.1"
 uuid = { version = "1.1.2", features = ["v5"] }
 ordered-float = { version = "3.2.0", default-features = false }
 libc = "0.2"
 thiserror = "1.0"
 
 [dev-dependencies]
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 structopt = "0.3"
 ctrlc = "3.2"
 env_logger = "0.9"

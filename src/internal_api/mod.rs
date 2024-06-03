@@ -4,6 +4,7 @@ use std::ffi::{c_void, CString};
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::{cmp, fmt, mem, ptr};
+use tracing::error;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct PacketProperties {
@@ -84,7 +85,7 @@ impl PacketDecoder {
         };
         comp_status.capi_result()?;
         if comp.is_null() {
-            log::error!("Could not forge a new bt_component from source component class");
+            error!("Could not forge a new bt_component from source component class");
             return Err(Error::Memory);
         }
 
@@ -111,13 +112,13 @@ impl PacketDecoder {
 
         let tc = unsafe { ffi::ctf_metadata_decoder_get_ir_trace_class(md_dec) };
         if tc.is_null() {
-            log::error!("Could not get CTF metadata decoder IR trace class");
+            error!("Could not get CTF metadata decoder IR trace class");
             return Err(Error::Memory);
         }
 
         let ctf_tc = unsafe { ffi::ctf_metadata_decoder_borrow_ctf_trace_class(md_dec) };
         if ctf_tc.is_null() {
-            log::error!("Could not borrow CTF metadata decoder CTF trace class");
+            error!("Could not borrow CTF metadata decoder CTF trace class");
             return Err(Error::ResourceBorrow);
         }
 
@@ -126,7 +127,7 @@ impl PacketDecoder {
 
         let trace = unsafe { ffi::bt_trace_create(tc) };
         if trace.is_null() {
-            log::error!("Could not create a trace instance using the CTF metadata trace class");
+            error!("Could not create a trace instance using the CTF metadata trace class");
             return Err(Error::Memory);
         }
 
@@ -279,7 +280,7 @@ extern "C" fn msg_iter_request_bytes(
     data: *mut c_void,
 ) -> ffi::ctf_msg_iter_medium_status::Type {
     if data.is_null() {
-        log::error!("CTF message iterator state is NULL");
+        error!("CTF message iterator state is NULL");
         return ffi::ctf_msg_iter_medium_status::CTF_MSG_ITER_MEDIUM_STATUS_ERROR;
     }
     let state_raw = data as *mut MsgIterState;
@@ -321,7 +322,7 @@ extern "C" fn msg_iter_request_bytes(
 /// request_bytes must return the content at the start of the next packet.
 extern "C" fn msg_iter_switch_packet(data: *mut c_void) -> ffi::ctf_msg_iter_medium_status::Type {
     if data.is_null() {
-        log::error!("CTF message iterator state is NULL");
+        error!("CTF message iterator state is NULL");
         return ffi::ctf_msg_iter_medium_status::CTF_MSG_ITER_MEDIUM_STATUS_ERROR;
     }
     ffi::ctf_msg_iter_medium_status::CTF_MSG_ITER_MEDIUM_STATUS_OK

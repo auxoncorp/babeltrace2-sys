@@ -2,6 +2,7 @@ use crate::{ffi, util, BtResult, Env, EnvValue, Error};
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::{ptr, slice};
+use tracing::error;
 use uuid::Uuid;
 
 pub struct Trace {
@@ -54,7 +55,7 @@ impl Trace {
                             }
                         }
                         typ => {
-                            log::error!(
+                            error!(
                                 "Environment value for key '{}' must be either string or integer (got {})",
                                 key, typ
                             );

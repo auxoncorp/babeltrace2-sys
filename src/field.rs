@@ -2,6 +2,7 @@ use crate::{ffi, util, BtResult, BtResultExt};
 use ordered_float::OrderedFloat;
 use std::collections::BTreeSet;
 use std::{fmt, ptr, slice};
+use tracing::trace;
 
 /// Fields are containers of trace data: they are found in events and packets
 pub struct Field {
@@ -72,7 +73,7 @@ impl Field {
                 if let Some(v) = util::opt_owned_cstr(raw)? {
                     Some(OwnedField::Scalar(maybe_field_name, ScalarField::String(v)))
                 } else {
-                    log::trace!("Skipping empty field string");
+                    trace!("Skipping empty field string");
                     None
                 }
             }
@@ -154,7 +155,7 @@ impl Field {
                         let mtype =
                             FieldType::from_raw(unsafe { ffi::bt_field_get_class_type(mfield) });
                         if !mtype.is_supported() {
-                            log::trace!(
+                            trace!(
                                 "Skipping unsupported structure member field type {:?}",
                                 mtype
                             );
@@ -184,7 +185,7 @@ impl Field {
                 }
             }
             Unsupported(typ) => {
-                log::trace!("Skipping unsupported field type {}", typ);
+                trace!("Skipping unsupported field type {}", typ);
                 None
             }
         })

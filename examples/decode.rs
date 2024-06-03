@@ -1,5 +1,3 @@
-#![deny(warnings, clippy::all)]
-
 use babeltrace2_sys::*;
 use std::ffi::{CString, NulError};
 use std::os::unix::ffi::OsStrExt;
@@ -9,6 +7,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::{process, thread};
 use structopt::StructOpt;
+use tracing::error;
 use url::Url;
 
 #[derive(StructOpt, Debug)]
@@ -89,7 +88,7 @@ enum Cmd {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     match do_main() {
         Err(e) => {
-            log::error!("{}", e);
+            error!("{}", e);
             Err(e)
         }
         Ok(()) => Ok(()),
@@ -97,7 +96,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn do_main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("trace")).init();
+    tracing_subscriber::fmt::init();
+
     let opts = Opts::from_args();
 
     let running = Arc::new(AtomicUsize::new(0));

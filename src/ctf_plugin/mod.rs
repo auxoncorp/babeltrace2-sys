@@ -1,5 +1,5 @@
-use crate::{BtResult, ComponentClassSource, Plugin, Value};
-pub use fs::CtfPluginSourceFsInitParams;
+use crate::{BtResult, ComponentClassSink, ComponentClassSource, Plugin, Value};
+pub use fs::{CtfPluginSinkFsInitParams, CtfPluginSourceFsInitParams};
 pub use lttng_live::{CtfPluginSourceLttnLiveInitParams, SessionNotFoundAction};
 use std::ffi::CStr;
 
@@ -13,7 +13,9 @@ impl CtfPlugin {
     pub const PLUGIN_NAME: &'static [u8] = b"ctf\0";
     pub const FS_COMP_NAME: &'static [u8] = b"fs\0";
     pub const LTTNG_LIVE_COMP_NAME: &'static [u8] = b"lttng-live\0";
-    pub const GRAPH_NODE_NAME: &'static [u8] = b"source.ctf\0";
+
+    pub const SOURCE_GRAPH_NODE_NAME: &'static [u8] = b"source.ctf\0";
+    pub const SINK_GRAPH_NODE_NAME: &'static [u8] = b"sink.ctf\0";
 
     pub fn load() -> BtResult<Self> {
         let name = Self::plugin_name();
@@ -25,6 +27,10 @@ impl CtfPlugin {
         name: &CStr,
     ) -> BtResult<ComponentClassSource> {
         self.0.borrow_source_component_class_by_name(name)
+    }
+
+    pub fn borrow_sink_component_class_by_name(&self, name: &CStr) -> BtResult<ComponentClassSink> {
+        self.0.borrow_sink_component_class_by_name(name)
     }
 
     pub fn plugin_name() -> &'static CStr {
@@ -39,14 +45,23 @@ impl CtfPlugin {
         unsafe { CStr::from_bytes_with_nul_unchecked(Self::LTTNG_LIVE_COMP_NAME) }
     }
 
-    pub fn graph_node_name() -> &'static CStr {
-        unsafe { CStr::from_bytes_with_nul_unchecked(Self::GRAPH_NODE_NAME) }
+    pub fn source_graph_node_name() -> &'static CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(Self::SOURCE_GRAPH_NODE_NAME) }
+    }
+
+    pub fn sink_graph_node_name() -> &'static CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(Self::SINK_GRAPH_NODE_NAME) }
     }
 }
 
 pub(crate) trait CtfPluginSrcExt {
     fn parameters(&self) -> &Value;
     fn source_component_class_name(&self) -> &'static CStr;
+}
+
+pub(crate) trait CtfPluginSinkExt {
+    fn parameters(&self) -> &Value;
+    fn sink_component_class_name(&self) -> &'static CStr;
 }
 
 #[cfg(test)]
@@ -58,6 +73,11 @@ mod tests {
         assert_ne!(CtfPlugin::plugin_name().to_str().unwrap().len(), 0);
         assert_ne!(CtfPlugin::fs_name().to_str().unwrap().len(), 0);
         assert_ne!(CtfPlugin::lttng_live_name().to_str().unwrap().len(), 0);
-        assert_ne!(CtfPlugin::graph_node_name().to_str().unwrap().len(), 0);
+        assert_ne!(
+            CtfPlugin::source_graph_node_name().to_str().unwrap().len(),
+            0
+        );
+        assert_ne!(CtfPlugin::sink_graph_node_name().to_str().unwrap().len(), 0);
+        assert_ne!(CtfPlugin::sink_graph_node_name().to_str().unwrap().len(), 0);
     }
 }

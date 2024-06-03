@@ -1,5 +1,3 @@
-#![deny(warnings, clippy::all)]
-
 use std::{env, fs};
 
 fn main() {

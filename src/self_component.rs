@@ -4,9 +4,22 @@ use std::os::raw::c_void;
 use std::ptr;
 
 pub type SelfComponentSink = SelfComponent<ffi::bt_self_component_sink>;
+pub type SelfComponentSource = SelfComponent<ffi::bt_self_component_source>;
 
-pub struct SelfComponent<T> {
+pub struct SelfComponent<T = ffi::bt_self_component> {
     pub(crate) inner: *mut T,
+}
+
+impl SelfComponent<ffi::bt_self_component> {
+    pub fn from_raw(inner: *mut ffi::bt_self_component) -> Self {
+        debug_assert!(!inner.is_null());
+        SelfComponent { inner }
+    }
+
+    // TODO - remove this once high-level types/API exists
+    pub fn inner_mut(&mut self) -> *mut ffi::bt_self_component {
+        self.inner
+    }
 }
 
 impl<T> SelfComponent<T> {
@@ -60,5 +73,30 @@ impl SelfComponentSink {
         }
         .capi_result()?;
         Ok(MessageIterator { inner: iter })
+    }
+}
+
+impl SelfComponentSource {
+    pub fn from_raw(inner: *mut ffi::bt_self_component_source) -> Self {
+        debug_assert!(!inner.is_null());
+        SelfComponentSource { inner }
+    }
+
+    pub fn add_output_port(&mut self, name: &CStr) -> BtResult<()> {
+        unsafe {
+            ffi::bt_self_component_source_add_output_port(
+                self.inner,
+                name.as_ptr(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            )
+        }
+        .capi_result()
+    }
+
+    pub fn upcast(&self) -> SelfComponent<ffi::bt_self_component> {
+        SelfComponent {
+            inner: self.inner as *mut _,
+        }
     }
 }

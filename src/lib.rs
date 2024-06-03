@@ -8,7 +8,8 @@ mod bindings;
 #[allow(non_camel_case_types)]
 pub mod ffi;
 
-pub(crate) mod common_pipeline;
+pub mod pipeline;
+pub mod source_plugin;
 pub(crate) mod util;
 
 mod clock;
@@ -50,10 +51,12 @@ pub use graph::*;
 pub use logger::*;
 pub use message::*;
 pub use message_iterator::*;
+pub use pipeline::EncoderPipeline;
 pub use plugin::*;
 pub use port::*;
 pub use proxy_plugin::*;
 pub use self_component::*;
+pub use source_plugin::*;
 pub use stream::*;
 pub use trace::*;
 pub use utils_plugin::*;

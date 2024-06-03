@@ -38,6 +38,8 @@ pub enum Error {
     CtfMetadataDecoderStatus(isize),
     #[error("libbabeltrace returned NULL when attempting to create a CTF message iterator")]
     CtfMessageIterCreate,
+    #[error("Error in user plugin. {0}")]
+    PluginError(String),
 }
 
 pub trait BtResultExt {

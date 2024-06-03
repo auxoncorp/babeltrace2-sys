@@ -1,5 +1,6 @@
 use crate::{BtResult, CtfPlugin, CtfPluginSrcExt, Value};
 use std::{ffi::CStr, fmt, str::FromStr};
+use tracing::debug;
 
 /// When the message iterator does not find the specified remote tracing
 /// session (SESSION part of the inputs parameter), do one of the following actions.
@@ -37,10 +38,9 @@ impl CtfPluginSourceLttnLiveInitParams {
         // https://babeltrace.org/docs/v2.0/man7/babeltrace2-source.ctf.lttng-live.7/#doc-param-session-not-found-action
         session_not_found_action: Option<SessionNotFoundAction>,
     ) -> BtResult<Self> {
-        log::debug!(
+        debug!(
             "Creating source.ctf.lttng-live init params: url={:?}, session-not-found-action={:?}",
-            url,
-            session_not_found_action
+            url, session_not_found_action
         );
 
         let mut params = Value::new_map()?;

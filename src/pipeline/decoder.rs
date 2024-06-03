@@ -3,8 +3,9 @@ use crate::{
     ComponentClassSource, ComponentFilter, ComponentSink, ComponentSource, CtfPlugin,
     CtfPluginSrcExt, Error, Graph, Logger, LoggingLevel, ProxyPlugin, UtilsPlugin,
 };
+use tracing::debug;
 
-pub(crate) struct CommonPipeline {
+pub(crate) struct DecoderPipeline {
     _utils_plugin: UtilsPlugin,
     _ctf_plugin: CtfPlugin,
     _proxy_plugin: ProxyPlugin,
@@ -18,7 +19,7 @@ pub(crate) struct CommonPipeline {
     pub(crate) proxy_state: BoxedRawProxyPluginState,
 }
 
-impl CommonPipeline {
+impl DecoderPipeline {
     pub(crate) fn new<P: CtfPluginSrcExt>(log_level: LoggingLevel, params: &P) -> BtResult<Self> {
         Logger::set_level(log_level);
 
@@ -40,7 +41,7 @@ impl CommonPipeline {
         // Add components to the processing graph
         let ctf_src = graph.add_source_component(
             &ctf_src_class,
-            CtfPlugin::graph_node_name(),
+            CtfPlugin::source_graph_node_name(),
             params.parameters(),
             log_level,
         )?;
@@ -62,14 +63,14 @@ impl CommonPipeline {
         // Connect all available source output ports to the muxer filter input ports
         let num_ctf_out_ports = ctf_src.get_output_port_count();
         if num_ctf_out_ports == 0 {
-            log::debug!("Input path doesn't appear to contain any stream data");
+            debug!("Input path doesn't appear to contain any stream data");
             return Err(Error::CtfSourceMissingOutputPorts);
         }
         let num_proxy_in_ports = proxy_sink.get_input_port_count();
         if num_proxy_in_ports == 0 {
             return Err(Error::ProxySinkMissingInputPort);
         }
-        log::debug!("Connecting {} CTF source ports to muxer", num_ctf_out_ports);
+        debug!(num_ctf_out_ports, "Connecting CTF source ports to muxer");
         for pidx in 0..num_ctf_out_ports {
             let in_port = muxer_filter.borrow_input_port_by_index(pidx)?;
             let out_port = ctf_src.borrow_output_port_by_index(pidx)?;
@@ -77,12 +78,12 @@ impl CommonPipeline {
         }
 
         // Connect the mux'd filter output port to the proxy sink input port
-        log::debug!("Connecting muxer port to proxy sink");
+        debug!("Connecting muxer port to proxy sink");
         let in_port = proxy_sink.borrow_input_port_by_index(0)?;
         let out_port = muxer_filter.borrow_output_port_by_index(0)?;
         graph.connect_ports(&out_port, &in_port)?;
 
-        Ok(CommonPipeline {
+        Ok(DecoderPipeline {
             _utils_plugin: utils_plugin,
             _ctf_plugin: ctf_plugin,
             _proxy_plugin: proxy_plugin,

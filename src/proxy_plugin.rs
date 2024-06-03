@@ -5,6 +5,7 @@ use crate::{
 use std::collections::{BTreeSet, VecDeque};
 use std::convert::{AsMut, AsRef};
 use std::ffi::{c_void, CStr};
+use tracing::{debug, error, trace};
 
 /// An output sink that funnels relevant trace information to the caller
 pub struct ProxyPlugin(Plugin);
@@ -158,7 +159,7 @@ impl ProxyPluginState {
         let retcode = match next_status {
             NextStatus::Ok => {
                 let messages = msg_array.as_slice();
-                log::trace!("Proxy sink consuming {} messages", messages.len());
+                trace!("Proxy sink consuming {} messages", messages.len());
                 for msg_ref in messages.iter() {
                     let msg = Message::from_raw(*msg_ref);
                     let msg_type = msg.get_type();
@@ -184,11 +185,11 @@ impl ProxyPluginState {
                             self.events.push_back(event);
                         }
                         // TODO - make this a type we surface
-                        MessageType::DiscardedEvents => log::debug!(
+                        MessageType::DiscardedEvents => debug!(
                             "Tracer discarded events in trace UUID={:?}",
                             self.trace_properties.uuid
                         ),
-                        MessageType::DiscardedPackets => log::debug!(
+                        MessageType::DiscardedPackets => debug!(
                             "Tracer discarded packets in trace UUID={:?}",
                             self.trace_properties.uuid
                         ),
@@ -217,10 +218,10 @@ extern "C" fn proxy_sink_initialize(
 ) -> ffi::bt_component_class_initialize_method_status::Type {
     use ffi::bt_component_class_initialize_method_status::*;
 
-    log::debug!("Initializing plugin");
+    debug!("Initializing plugin");
 
     if initialize_method_data.is_null() {
-        log::error!("Proxy plugin state is NULL");
+        error!("Proxy plugin state is NULL");
         return BT_COMPONENT_CLASS_INITIALIZE_METHOD_STATUS_ERROR;
     }
 
@@ -234,7 +235,7 @@ extern "C" fn proxy_sink_initialize(
     // component, this sink component can create a message iterator
     // to consume messages.
     if sink.add_input_port(ComponentSink::in_port_name()).is_err() {
-        log::error!("Failed to add proxy plugin input port");
+        error!("Failed to add proxy plugin input port");
         BT_COMPONENT_CLASS_INITIALIZE_METHOD_STATUS_ERROR
     } else {
         BT_COMPONENT_CLASS_INITIALIZE_METHOD_STATUS_OK
@@ -243,7 +244,7 @@ extern "C" fn proxy_sink_initialize(
 
 #[no_mangle]
 extern "C" fn proxy_sink_finalize(_sink: *mut ffi::bt_self_component_sink) {
-    log::debug!("Finalizing plugin");
+    debug!("Finalizing plugin");
 }
 
 #[no_mangle]
@@ -252,12 +253,12 @@ extern "C" fn proxy_sink_graph_is_configured(
 ) -> ffi::bt_component_class_sink_graph_is_configured_method_status::Type {
     use ffi::bt_component_class_sink_graph_is_configured_method_status::*;
 
-    log::debug!("Graph sink component configured");
+    debug!("Graph sink component configured");
 
     let mut sink = SelfComponentSink::from_raw(sink);
     let state = sink.get_c_user_data_ptr() as *mut ProxyPluginState;
     if state.is_null() {
-        log::error!("Plugin state is NULL");
+        error!("Plugin state is NULL");
         return BT_COMPONENT_CLASS_SINK_GRAPH_IS_CONFIGURED_METHOD_STATUS_ERROR;
     }
 
@@ -265,7 +266,7 @@ extern "C" fn proxy_sink_graph_is_configured(
     let in_port = if let Ok(p) = sink.borrow_input_port_by_index(0) {
         p
     } else {
-        log::error!("Failed to borrow proxy sink inport port");
+        error!("Failed to borrow proxy sink inport port");
         return BT_COMPONENT_CLASS_SINK_GRAPH_IS_CONFIGURED_METHOD_STATUS_ERROR;
     };
 
@@ -273,7 +274,7 @@ extern "C" fn proxy_sink_graph_is_configured(
     let msg_iter = if let Ok(iter) = sink.create_message_iterator(&in_port) {
         iter
     } else {
-        log::error!("Failed to create message iterator from proxy sink component");
+        error!("Failed to create message iterator from proxy sink component");
         return BT_COMPONENT_CLASS_SINK_GRAPH_IS_CONFIGURED_METHOD_STATUS_ERROR;
     };
 
@@ -292,7 +293,7 @@ extern "C" fn proxy_sink_consume(
     let mut sink = SelfComponentSink::from_raw(sink);
     let state = sink.get_c_user_data_ptr() as *mut ProxyPluginState;
     if state.is_null() {
-        log::error!("Proxy sink cannot consume, plugin state is NULL");
+        error!("Proxy sink cannot consume, plugin state is NULL");
         return BT_COMPONENT_CLASS_SINK_CONSUME_METHOD_STATUS_ERROR;
     }
 
@@ -300,7 +301,7 @@ extern "C" fn proxy_sink_consume(
     match state.consume() {
         Ok(retcode) => retcode,
         Err(e) => {
-            log::error!("Proxy sink cannot consume. {}", e);
+            error!("Proxy sink cannot consume. {}", e);
             BT_COMPONENT_CLASS_SINK_CONSUME_METHOD_STATUS_ERROR
         }
     }
@@ -313,9 +314,9 @@ pub mod proxy_plugin_descriptors {
     use super::*;
     use crate::ffi::*;
 
-    pub const SINK_INIT_METHOD_NAME: &[u8] = b"sink_initialize_method";
-    pub const SINK_FINI_METHOD_NAME: &[u8] = b"sink_finalize_method";
-    pub const SINK_GRAPH_IS_CONF_METHOD_NAME: &[u8] = b"sink_graph_is_configured_method";
+    pub const SINK_INIT_METHOD_NAME: &[u8] = b"sink_initialize_method\0";
+    pub const SINK_FINI_METHOD_NAME: &[u8] = b"sink_finalize_method\0";
+    pub const SINK_GRAPH_IS_CONF_METHOD_NAME: &[u8] = b"sink_graph_is_configured_method\0";
 
     pub static PLUGIN_DESC: __bt_plugin_descriptor = __bt_plugin_descriptor {
         name: ProxyPlugin::PLUGIN_NAME.as_ptr() as *const _,

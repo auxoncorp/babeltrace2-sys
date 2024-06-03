@@ -1,5 +1,6 @@
-use crate::{BtResult, CtfPlugin, CtfPluginSrcExt, Error, Value};
+use crate::{BtResult, CtfPlugin, CtfPluginSinkExt, CtfPluginSrcExt, Error, Value};
 use std::ffi::CStr;
+use tracing::debug;
 
 /// See <https://babeltrace.org/docs/v2.0/man7/babeltrace2-source.ctf.fs.7/#doc-_initialization_parameters>
 pub struct CtfPluginSourceFsInitParams {
@@ -31,7 +32,7 @@ impl CtfPluginSourceFsInitParams {
         // https://babeltrace.org/docs/v2.0/man7/babeltrace2-source.ctf.fs.7/#doc-param-inputs
         inputs: &[&CStr],
     ) -> BtResult<Self> {
-        log::debug!(
+        debug!(
             "Creating source.ctf.fs init params: trace-name={:?}, clock-class-offset-ns={:?}, clock-class-offset-s={:?}, force-clock-class-origin-unix-epoch={:?}, inputs={:?}",
             trace_name,
             clock_class_offset_ns,
@@ -131,12 +132,121 @@ impl CtfPluginSrcExt for CtfPluginSourceFsInitParams {
     }
 }
 
+/// See <https://babeltrace.org/docs/v2.0/man7/babeltrace2-sink.ctf.fs.7/#doc-_initialization_parameters>
+pub struct CtfPluginSinkFsInitParams {
+    params: Value,
+    _path: Value,
+    _assume_single_trace: Option<Value>,
+    _ignore_discarded_events: Option<Value>,
+    _ignore_discarded_packets: Option<Value>,
+    _quiet: Option<Value>,
+}
+
+impl CtfPluginSinkFsInitParams {
+    pub const PATH_KEY: &'static [u8] = b"path\0";
+    pub const ASSUME_SINGLE_TRACE_KEY: &'static [u8] = b"assume-single-trace\0";
+    pub const IGNORE_DISCARDED_EVENTS_KEY: &'static [u8] = b"ignore-discarded-events\0";
+    pub const IGNORE_DISCARDED_PACKETS_KEY: &'static [u8] = b"ignore-discarded-packets\0";
+    pub const QUIET_KEY: &'static [u8] = b"quiet\0";
+
+    pub fn new(
+        assume_single_trace: Option<bool>,
+        ignore_discarded_events: Option<bool>,
+        ignore_discarded_packets: Option<bool>,
+        quiet: Option<bool>,
+        path: &CStr,
+    ) -> BtResult<Self> {
+        debug!("Creating sink.ctf.fs init params: assume-single-trace={:?}, ignore-discarded-events={:?}, ignore-discarded-packets={:?}, quiet={:?}, path={:?}",
+            assume_single_trace, ignore_discarded_events, ignore_discarded_packets, quiet, path);
+
+        let mut params = Value::new_map()?;
+
+        let assume_single_trace = if let Some(val) = assume_single_trace {
+            let val = Value::new_bool_with(val)?;
+            params.insert_entry(Self::assume_single_trace_key(), &val)?;
+            val.into()
+        } else {
+            None
+        };
+
+        let ignore_discarded_events = if let Some(val) = ignore_discarded_events {
+            let val = Value::new_bool_with(val)?;
+            params.insert_entry(Self::ignore_discarded_events_key(), &val)?;
+            val.into()
+        } else {
+            None
+        };
+
+        let ignore_discarded_packets = if let Some(val) = ignore_discarded_packets {
+            let val = Value::new_bool_with(val)?;
+            params.insert_entry(Self::ignore_discarded_packets_key(), &val)?;
+            val.into()
+        } else {
+            None
+        };
+
+        let quiet = if let Some(val) = quiet {
+            let val = Value::new_bool_with(val)?;
+            params.insert_entry(Self::quiet_key(), &val)?;
+            val.into()
+        } else {
+            None
+        };
+
+        let path_val = Value::new_string_with(path)?;
+        params.insert_entry(Self::path_key(), &path_val)?;
+
+        Ok(CtfPluginSinkFsInitParams {
+            params,
+            _path: path_val,
+            _assume_single_trace: assume_single_trace,
+            _ignore_discarded_events: ignore_discarded_events,
+            _ignore_discarded_packets: ignore_discarded_packets,
+            _quiet: quiet,
+        })
+    }
+
+    pub fn params(&self) -> &Value {
+        &self.params
+    }
+
+    fn assume_single_trace_key() -> &'static CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(Self::ASSUME_SINGLE_TRACE_KEY) }
+    }
+
+    fn ignore_discarded_events_key() -> &'static CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(Self::IGNORE_DISCARDED_EVENTS_KEY) }
+    }
+
+    fn ignore_discarded_packets_key() -> &'static CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(Self::IGNORE_DISCARDED_PACKETS_KEY) }
+    }
+
+    fn quiet_key() -> &'static CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(Self::QUIET_KEY) }
+    }
+
+    fn path_key() -> &'static CStr {
+        unsafe { CStr::from_bytes_with_nul_unchecked(Self::PATH_KEY) }
+    }
+}
+
+impl CtfPluginSinkExt for CtfPluginSinkFsInitParams {
+    fn parameters(&self) -> &Value {
+        self.params()
+    }
+
+    fn sink_component_class_name(&self) -> &'static CStr {
+        CtfPlugin::fs_name()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn cstrings_are_valid() {
+    fn source_cstrings_are_valid() {
         assert_ne!(
             CtfPluginSourceFsInitParams::inputs_key()
                 .to_str()
@@ -167,6 +277,45 @@ mod tests {
         );
         assert_ne!(
             CtfPluginSourceFsInitParams::force_epoch_key()
+                .to_str()
+                .unwrap()
+                .len(),
+            0
+        );
+    }
+
+    #[test]
+    fn sink_cstrings_are_valid() {
+        assert_ne!(
+            CtfPluginSinkFsInitParams::assume_single_trace_key()
+                .to_str()
+                .unwrap()
+                .len(),
+            0
+        );
+        assert_ne!(
+            CtfPluginSinkFsInitParams::ignore_discarded_events_key()
+                .to_str()
+                .unwrap()
+                .len(),
+            0
+        );
+        assert_ne!(
+            CtfPluginSinkFsInitParams::ignore_discarded_packets_key()
+                .to_str()
+                .unwrap()
+                .len(),
+            0
+        );
+        assert_ne!(
+            CtfPluginSinkFsInitParams::quiet_key()
+                .to_str()
+                .unwrap()
+                .len(),
+            0
+        );
+        assert_ne!(
+            CtfPluginSinkFsInitParams::path_key()
                 .to_str()
                 .unwrap()
                 .len(),

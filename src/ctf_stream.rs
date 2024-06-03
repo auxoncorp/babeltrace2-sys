@@ -1,12 +1,13 @@
-use crate::common_pipeline::CommonPipeline;
+use crate::pipeline::DecoderPipeline;
 use crate::{
     BtResult, CtfPluginSourceLttnLiveInitParams, LoggingLevel, OwnedEvent, RunStatus,
     StreamProperties, TraceProperties,
 };
 use std::collections::{BTreeSet, VecDeque};
+use tracing::debug;
 
 pub struct CtfStream {
-    pipeline: CommonPipeline,
+    pipeline: DecoderPipeline,
     metadata_recvd: bool,
 }
 
@@ -15,7 +16,7 @@ impl CtfStream {
         log_level: LoggingLevel,
         params: &CtfPluginSourceLttnLiveInitParams,
     ) -> BtResult<Self> {
-        let pipeline = CommonPipeline::new(log_level, params)?;
+        let pipeline = DecoderPipeline::new(log_level, params)?;
         Ok(CtfStream {
             pipeline,
             metadata_recvd: false,
@@ -32,7 +33,7 @@ impl CtfStream {
             }
             RunStatus::TryAgain => (),
             RunStatus::End => {
-                log::debug!(
+                debug!(
                     "CTF stream reached the end indicating the remote tracing session was closed"
                 );
             }

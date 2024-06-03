@@ -6,6 +6,7 @@ use crate::{
 use std::ffi::CStr;
 use std::os::raw::c_void;
 use std::ptr;
+use tracing::debug;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum RunStatus {
@@ -41,7 +42,7 @@ impl Graph {
         params: &Value,
         log_level: LoggingLevel,
     ) -> BtResult<ComponentSource> {
-        log::debug!("Adding source component to graph");
+        debug!("Adding source component to graph");
         let mut comp = ptr::null();
         unsafe {
             ffi::bt_graph_add_source_component(
@@ -57,13 +58,38 @@ impl Graph {
         Ok(ComponentSource { inner: comp })
     }
 
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
+    pub fn add_source_component_with_initialize_method_data(
+        &mut self,
+        class: &ComponentClassSource,
+        name: &CStr,
+        initialize_method_data: *mut c_void,
+        log_level: LoggingLevel,
+    ) -> BtResult<ComponentSource> {
+        debug!("Adding source component to graph");
+        let mut comp = ptr::null();
+        unsafe {
+            ffi::bt_graph_add_source_component_with_initialize_method_data(
+                self.inner,
+                class.inner,
+                name.as_ptr(),
+                ptr::null(),
+                initialize_method_data,
+                log_level.into(),
+                &mut comp,
+            )
+        }
+        .capi_result()?;
+        Ok(ComponentSource { inner: comp })
+    }
+
     pub fn add_filter_component(
         &mut self,
         class: &ComponentClassFilter,
         name: &CStr,
         log_level: LoggingLevel,
     ) -> BtResult<ComponentFilter> {
-        log::debug!("Adding filter component to graph");
+        debug!("Adding filter component to graph");
         let mut comp = ptr::null();
         unsafe {
             ffi::bt_graph_add_filter_component(
@@ -79,6 +105,29 @@ impl Graph {
         Ok(ComponentFilter { inner: comp })
     }
 
+    pub fn add_sink_component(
+        &mut self,
+        class: &ComponentClassSink,
+        name: &CStr,
+        params: &Value,
+        log_level: LoggingLevel,
+    ) -> BtResult<ComponentSink> {
+        debug!("Adding sink component to graph");
+        let mut comp = ptr::null();
+        unsafe {
+            ffi::bt_graph_add_sink_component(
+                self.inner,
+                class.inner,
+                name.as_ptr(),
+                params.inner,
+                log_level.into(),
+                &mut comp,
+            )
+        }
+        .capi_result()?;
+        Ok(ComponentSink { inner: comp })
+    }
+
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn add_sink_component_with_initialize_method_data(
         &mut self,
@@ -87,7 +136,7 @@ impl Graph {
         initialize_method_data: *mut c_void,
         log_level: LoggingLevel,
     ) -> BtResult<ComponentSink> {
-        log::debug!("Adding sink component to graph");
+        debug!("Adding sink component to graph");
         let mut comp = ptr::null();
         unsafe {
             ffi::bt_graph_add_sink_component_with_initialize_method_data(

@@ -1,6 +1,7 @@
 use crate::{ffi, util, BtResult, Error};
 use std::convert::TryInto;
 use std::slice;
+use tracing::warn;
 use uuid::Uuid;
 
 pub type ClockCycles = u64;
@@ -87,7 +88,7 @@ impl ClockSnapshot {
         if status == BT_CLOCK_SNAPSHOT_GET_NS_FROM_ORIGIN_STATUS_OK {
             Some(ns_from_origin)
         } else {
-            log::warn!("Clock class conversion ns from origin overflowed");
+            warn!("Clock class conversion ns from origin overflowed");
             None
         }
     }
